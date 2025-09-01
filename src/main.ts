@@ -17,12 +17,17 @@ function addSoundToClickable(obj: Container | Sprite) {
 import * as rgs from "./rgs-auth";
 import { handleGameRound } from "./gameRoundHelper";
 import { Application, Assets, Sprite, Graphics } from "pixi.js";
+import { createBGAnimationGroup } from "./BGAnimationGroup";
 import * as PIXI_SOUND from "pixi-sound";
 
 // Run authentication on load
 rgs.authenticate().catch(console.error);
 
 import { Container, Text, TextStyle } from "pixi.js";
+
+// --- Animation Groups ---
+let BGAnimationGroup: Container;
+let CupAnimationGroup: Container;
 
 (async () => {
   // --- Session-based sound enablement ---
@@ -69,6 +74,7 @@ import { Container, Text, TextStyle } from "pixi.js";
   // Register sounds
   PIXI_SOUND.default.add("hover", hoverSoundUrl);
   PIXI_SOUND.default.add("press", pressSoundUrl);
+
   // Create a new application
   const app = new Application();
   await app.init({ background: "#1099bb", resizeTo: window });
@@ -80,7 +86,21 @@ import { Container, Text, TextStyle } from "pixi.js";
   canvas.style.height = "100vh";
   window.dispatchEvent(new Event("resize"));
 
-  // Removed engine.png sprite from canvas
+  // --- Create Animation Groups ---
+  BGAnimationGroup = new Container();
+  BGAnimationGroup.name = "BGAnimationGroup";
+  app.stage.addChild(BGAnimationGroup);
+
+  CupAnimationGroup = new Container();
+  CupAnimationGroup.name = "CupAnimationGroup";
+  app.stage.addChild(CupAnimationGroup);
+
+  // --- Render BG Animation Group ---
+  (async () => {
+    const bgGroup = await createBGAnimationGroup(app);
+    BGAnimationGroup.addChild(bgGroup);
+  })();
+
 
   // --- Loader Bar Animation ---
   const loaderFrames: Sprite[] = [];
