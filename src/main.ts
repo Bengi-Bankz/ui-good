@@ -501,12 +501,12 @@ authenticate().catch(console.error);
     betInput.y = app.screen.height - betInputBgHeight - 32 * scale;
     buildBetInput();
 
-  // Play/Start Button
-  const buttonWidth = 352 * scale;
-  const buttonHeight = 48 * scale;
-  playStartButton.x = (app.screen.width - buttonWidth) / 2;
-  playStartButton.y = betInput.y - buttonHeight - 24 * scale;
-  buildPlayStartButton();
+    // Play/Start Button
+    const buttonWidth = 352 * scale;
+    const buttonHeight = 48 * scale;
+    playStartButton.x = (app.screen.width - buttonWidth) / 2;
+    playStartButton.y = betInput.y - buttonHeight - 24 * scale;
+    buildPlayStartButton();
 
     // Balance
     balanceText.position.set(20, 20);
