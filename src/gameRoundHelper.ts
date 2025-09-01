@@ -12,22 +12,10 @@
 //     "message": "player has active bet"
 //   }
 
-export type PlayResult = "win" | "loss";
-
-export interface PlayResponse {
-  result: PlayResult;
-  // ...other fields from API response
-}
-
-export interface EndRoundResponse {
-  balance: {
-    amount: number;
-    currency?: string;
-  };
-  // ...add other fields from endRound API response if needed
-}
+// Use PlayResponse and EndRoundResponse from rgs-auth.ts
 
 import type { Container, Sprite, Text } from "pixi.js";
+import type { PlayResponse, EndRoundResponse } from "./rgs-auth";
 
 export interface GameRoundOptions {
   ForegroundAnimationGroup: Container & {
@@ -52,7 +40,9 @@ export interface GameRoundOptions {
   balanceText: Text;
 }
 
-export async function handleGameRound(opts: GameRoundOptions) {
+export async function handleGameRound(
+  opts: GameRoundOptions & { skipAnimation?: boolean; forceEndRound?: boolean },
+) {
   // Destructure options for clarity
   const {
     ForegroundAnimationGroup,
@@ -61,6 +51,8 @@ export async function handleGameRound(opts: GameRoundOptions) {
     lowerCup,
     onRest,
     onBalanceUpdate,
+    skipAnimation = false,
+    forceEndRound = false,
   } = opts;
 
   // Import API functions dynamically to avoid circular deps
@@ -68,8 +60,29 @@ export async function handleGameRound(opts: GameRoundOptions) {
     "./rgs-auth"
   );
 
-  // Step 1: Get play response from API
-  const playResponse = await getBookResponse();
+  let playResponse: PlayResponse | null = null;
+  let activeBetError = false;
+  if (!skipAnimation) {
+    try {
+      playResponse = await getBookResponse();
+    } catch (err) {
+      // If error is active bet, set flag
+      type RgsError = { error: string; message: string };
+      const e = err as RgsError;
+      if (
+        typeof err === "object" &&
+        err !== null &&
+        "error" in err &&
+        e.error === "ERR_VAL" &&
+        typeof e.message === "string" &&
+        /active bet/i.test(e.message)
+      ) {
+        activeBetError = true;
+      } else {
+        throw err;
+      }
+    }
+  }
 
   // Step 2: Enable cup click and wait for user pick
   const cupSprites: Sprite[] = ForegroundAnimationGroup.cupSprites;
@@ -88,44 +101,54 @@ export async function handleGameRound(opts: GameRoundOptions) {
           c.interactive = false;
           c.cursor = "default";
         });
-        // Animate chosen cup lift
-        await liftCup(cup);
-        if (playResponse.round && playResponse.round.payoutMultiplier > 0) {
-          // WIN: reveal diamond under chosen cup
-          diamondSprite.visible = true;
-          diamondSprite.x = cup.x;
-          diamondSprite.y = cup.y - cup.height * cup.scale.y;
-          diamondSprite.zIndex = 5;
-          ForegroundAnimationGroup.setChildIndex(
-            diamondSprite,
-            ForegroundAnimationGroup.getChildIndex(cup),
-          );
-          await new Promise((r) => setTimeout(r, 800));
-          await lowerCup(cup);
-          diamondSprite.visible = false;
-          // End round and update balance
+        if (activeBetError || forceEndRound) {
+          // Just call endRound after pick, no animation
           await endRound();
           onBalanceUpdate(endRoundResponse || { balance: { amount: 0 } });
         } else {
-          // LOSS: reveal empty cup, then reveal diamond under random other cup
-          await new Promise((r) => setTimeout(r, 600));
-          await lowerCup(cup);
-          // Pick a random other cup
-          let otherIdx = Math.floor(Math.random() * 3);
-          while (otherIdx === idx) otherIdx = Math.floor(Math.random() * 3);
-          const otherCup = cupSprites[otherIdx];
-          await liftCup(otherCup);
-          diamondSprite.visible = true;
-          diamondSprite.x = otherCup.x;
-          diamondSprite.y = otherCup.y - otherCup.height * otherCup.scale.y;
-          diamondSprite.zIndex = 5;
-          ForegroundAnimationGroup.setChildIndex(
-            diamondSprite,
-            ForegroundAnimationGroup.getChildIndex(otherCup),
-          );
-          await new Promise((r) => setTimeout(r, 800));
-          await lowerCup(otherCup);
-          diamondSprite.visible = false;
+          // Animate chosen cup lift
+          await liftCup(cup);
+          if (
+            playResponse &&
+            playResponse.round &&
+            playResponse.round.payoutMultiplier > 0
+          ) {
+            // WIN: reveal diamond under chosen cup
+            diamondSprite.visible = true;
+            diamondSprite.x = cup.x;
+            diamondSprite.y = cup.y - cup.height * cup.scale.y;
+            diamondSprite.zIndex = 5;
+            ForegroundAnimationGroup.setChildIndex(
+              diamondSprite,
+              ForegroundAnimationGroup.getChildIndex(cup),
+            );
+            await new Promise((r) => setTimeout(r, 800));
+            await lowerCup(cup);
+            diamondSprite.visible = false;
+            // End round and update balance
+            await endRound();
+            onBalanceUpdate(endRoundResponse || { balance: { amount: 0 } });
+          } else {
+            // LOSS: reveal empty cup, then reveal diamond under random other cup
+            await new Promise((r) => setTimeout(r, 600));
+            await lowerCup(cup);
+            // Pick a random other cup
+            let otherIdx = Math.floor(Math.random() * 3);
+            while (otherIdx === idx) otherIdx = Math.floor(Math.random() * 3);
+            const otherCup = cupSprites[otherIdx];
+            await liftCup(otherCup);
+            diamondSprite.visible = true;
+            diamondSprite.x = otherCup.x;
+            diamondSprite.y = otherCup.y - otherCup.height * otherCup.scale.y;
+            diamondSprite.zIndex = 5;
+            ForegroundAnimationGroup.setChildIndex(
+              diamondSprite,
+              ForegroundAnimationGroup.getChildIndex(otherCup),
+            );
+            await new Promise((r) => setTimeout(r, 800));
+            await lowerCup(otherCup);
+            diamondSprite.visible = false;
+          }
         }
         // Reset state for next round
         if (typeof ForegroundAnimationGroup.layout === "function")

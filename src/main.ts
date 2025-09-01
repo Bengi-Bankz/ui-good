@@ -298,24 +298,67 @@ authenticate().catch(console.error);
     if (!playStartButtonDisabled) {
       playStartButton.on("pointertap", async () => {
         setPlayStartButtonDisabled(true);
-        playStartButtonState = "waiting";
-        buildPlayStartButton();
-        await runAnimationSequence();
-        // Button says "Choose a Cup" while waiting for user pick
-        await handleGameRound({
-          ForegroundAnimationGroup,
-          diamondSprite,
-          liftCup,
-          lowerCup,
-          onRest: () => {
-            setPlayStartButtonDisabled(false);
-            playStartButtonState = "ready";
-            buildPlayStartButton();
-          },
-          onBalanceUpdate,
-          balanceText,
-        });
-        // onRest will re-enable and reset button text
+        // Try to get play response, catch active bet error
+        let activeBetError = false;
+        // ...existing code...
+        try {
+          // Try to get play response (simulate what handleGameRound does)
+          const { getBookResponse } = await import("./rgs-auth");
+          await getBookResponse();
+        } catch (err) {
+          type RgsError = { error: string; message: string };
+          const e = err as RgsError;
+          if (
+            typeof err === "object" &&
+            err !== null &&
+            "error" in err &&
+            e.error === "ERR_VAL" &&
+            typeof e.message === "string" &&
+            /active bet/i.test(e.message)
+          ) {
+            activeBetError = true;
+          } else {
+            throw err;
+          }
+        }
+        if (activeBetError) {
+          // Skip animation, prompt choose a cup, call endRound after pick
+          playStartButtonState = "waiting";
+          buildPlayStartButton();
+          await handleGameRound({
+            ForegroundAnimationGroup,
+            diamondSprite,
+            liftCup,
+            lowerCup,
+            onRest: () => {
+              setPlayStartButtonDisabled(false);
+              playStartButtonState = "ready";
+              buildPlayStartButton();
+            },
+            onBalanceUpdate,
+            balanceText,
+            skipAnimation: true,
+            forceEndRound: true,
+          });
+        } else {
+          // Normal flow: animation, then choose a cup
+          playStartButtonState = "waiting";
+          buildPlayStartButton();
+          await runAnimationSequence();
+          await handleGameRound({
+            ForegroundAnimationGroup,
+            diamondSprite,
+            liftCup,
+            lowerCup,
+            onRest: () => {
+              setPlayStartButtonDisabled(false);
+              playStartButtonState = "ready";
+              buildPlayStartButton();
+            },
+            onBalanceUpdate,
+            balanceText,
+          });
+        }
       });
       playStartButton.on("pointerover", () => {
         playStartButtonBg.tint = 0xff5252;
