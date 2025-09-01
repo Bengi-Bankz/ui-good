@@ -34,13 +34,28 @@ export async function createBGAnimationGroup(app: any): Promise<Container> {
     rightDiamond.scale.set(0.5);
     group.addChild(rightDiamond);
 
-    // --- Responsive layout ---
+    // --- Responsive layout with mobile breakpoints ---
     function layoutBG() {
         // BG full screen
         bgSprite.width = app.screen.width;
         bgSprite.height = app.screen.height;
         bgSprite.x = app.screen.width / 2;
         bgSprite.y = app.screen.height / 2;
+
+
+        // Multi-breakpoint scaling
+        let scale = 0.5;
+        if (app.screen.width < 400) {
+            scale = 0.1;
+        } else if (app.screen.width < 600) {
+            scale = 0.2;
+        } else if (app.screen.width < 1000) {
+            scale = 0.4;
+        }
+        nameSprite.scale.set(scale);
+        leftDiamond.scale.set(scale);
+        rightDiamond.scale.set(scale);
+
         // Name at top center
         nameSprite.x = app.screen.width / 2;
         nameSprite.y = app.screen.height * 0.2;
