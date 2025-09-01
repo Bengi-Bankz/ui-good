@@ -1,3 +1,10 @@
+// UI scaling utilities for responsive design
+// Provides adaptive scaling based on screen dimensions
+//
+// TODO: Add support for custom scaling factors
+// TODO: Consider orientation-based scaling for mobile
+// TODO: Add accessibility scaling options
+
 export function getUIScale(screenWidth: number): number {
   if (screenWidth >= 1400) return 1.0; // Desktop
   if (screenWidth >= 1100) return 0.85; // Laptop

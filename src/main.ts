@@ -1,5 +1,13 @@
-import { handleGameRound } from "./gameRoundHelper";
-import { authenticate } from "./rgs-auth";
+// Main application entry point
+// Handles Pixi.js setup, UI creation, and game initialization
+//
+// TODO: Break this large file into smaller, focused modules
+// TODO: Extract UI components into separate classes
+// TODO: Add proper error boundaries and user feedback
+// TODO: Implement game state management system
+
+import { handleGameRound } from "./game/gameRoundHelper";
+import { initializeRGS } from "./rgs";
 import {
   Application,
   Assets,
@@ -9,13 +17,18 @@ import {
   Text,
   TextStyle,
 } from "pixi.js";
-import { getAdjustedScale } from "./uiScaleHelper";
-import { createBGAnimationGroup, LayoutContainer } from "./BGAnimationGroup";
-import { createCupGameSequence } from "./AnimationLogic";
-import { createForegroundAnimationGroup } from "./ForegroundAnimationGroup";
+import { getAdjustedScale } from "./ui/uiScaleHelper";
+import {
+  createBGAnimationGroup,
+  LayoutContainer,
+} from "./animations/BGAnimationGroup";
+import { createCupGameSequence } from "./animations/AnimationLogic";
+import { createForegroundAnimationGroup } from "./animations/ForegroundAnimationGroup";
 import * as PIXI_SOUND from "pixi-sound";
 
 // --- Global sound effect helper for all clickable elements ---
+// TODO: Extract to a separate UI utility module
+// TODO: Add volume control and sound preference management
 function addSoundToClickable(obj: Container | Sprite) {
   obj.eventMode = "static";
   obj.cursor = "pointer";
@@ -32,8 +45,8 @@ function addSoundToClickable(obj: Container | Sprite) {
   });
 }
 
-// Authenticate wallet/session on load
-authenticate().catch(console.error);
+// Initialize RGS (Remote Game Server) on load
+initializeRGS().catch(console.error);
 
 (async () => {
   // --- Session-based sound enablement ---
@@ -118,6 +131,9 @@ authenticate().catch(console.error);
   }, 2000);
 
   // --- Bet Input Area ---
+  // TODO: Extract bet input to separate UI component
+  // TODO: Add bet validation and limits
+  // TODO: Support different currencies
   const betSteps = [
     0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 1.2, 1.4, 1.6, 1.8, 2, 3, 4,
     5, 6, 7, 8, 9, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80,
@@ -300,22 +316,13 @@ authenticate().catch(console.error);
         setPlayStartButtonDisabled(true);
         // Try to get play response, catch active bet error
         let activeBetError = false;
-        // ...existing code...
         try {
           // Try to get play response (simulate what handleGameRound does)
-          const { getBookResponse } = await import("./rgs-auth");
-          await getBookResponse();
+          const { executeGameRound } = await import("./rgs");
+          await executeGameRound(1); // TODO: Use actual bet value
         } catch (err) {
-          type RgsError = { error: string; message: string };
-          const e = err as RgsError;
-          if (
-            typeof err === "object" &&
-            err !== null &&
-            "error" in err &&
-            e.error === "ERR_VAL" &&
-            typeof e.message === "string" &&
-            /active bet/i.test(e.message)
-          ) {
+          const { isActiveBetError } = await import("./rgs");
+          if (isActiveBetError(err)) {
             activeBetError = true;
           } else {
             throw err;
