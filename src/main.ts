@@ -386,7 +386,7 @@ rgs.authenticate().catch(console.error);
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
 
-  function onRest() {}
+  function onRest() { }
 
   function onBalanceUpdate(endRoundResponse: { balance: { amount: number } }) {
     if (
@@ -415,8 +415,8 @@ rgs.authenticate().catch(console.error);
     return {
       result:
         playResp.round &&
-        playResp.round.payoutMultiplier &&
-        playResp.round.payoutMultiplier > 0
+          playResp.round.payoutMultiplier &&
+          playResp.round.payoutMultiplier > 0
           ? "win"
           : "loss",
       balance: playResp.balance,
