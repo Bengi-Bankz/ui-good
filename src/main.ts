@@ -362,10 +362,10 @@ rgs.authenticate().catch(console.error);
     const buttonHeight = 48 * scale;
     const buttonSpacing = 32 * scale;
     const totalWidth = buttonWidth * 2 + buttonSpacing;
-  startButton.x = (app.screen.width - totalWidth) / 2;
-  startButton.y = betInput.y - buttonHeight - 24 * scale;
-  playButton.x = startButton.x + buttonWidth + buttonSpacing;
-  playButton.y = startButton.y;
+    startButton.x = (app.screen.width - totalWidth) / 2;
+    startButton.y = betInput.y - buttonHeight - 24 * scale;
+    playButton.x = startButton.x + buttonWidth + buttonSpacing;
+    playButton.y = startButton.y;
     buildStyledButton(playButton, "Play", 0xd32f2f, handleAutomatedRound);
     buildStyledButton(startButton, "Start", 0xd32f2f, () => {
       alert("Lennox Start button clicked!");
