@@ -17,7 +17,7 @@ export async function createForegroundAnimationGroup(
         new URL("./assets/prize.png", import.meta.url).href,
     );
     const prizeSprite = new Sprite(prizeTexture);
-    prizeSprite.anchor.set(0.5);
+    prizeSprite.anchor.set(0.5, 1);
     group.addChild(prizeSprite);
 
     // --- Three redcup.png ---
@@ -27,7 +27,7 @@ export async function createForegroundAnimationGroup(
             new URL("./assets/redcup.png", import.meta.url).href,
         );
         const cupSprite = new Sprite(cupTexture);
-        cupSprite.anchor.set(0.5);
+        cupSprite.anchor.set(0.5, 1);
         group.addChild(cupSprite);
         cupSprites.push(cupSprite);
     }
@@ -42,18 +42,24 @@ export async function createForegroundAnimationGroup(
         prizeSprite.scale.set(scale);
         cupSprites.forEach((cup) => cup.scale.set(scale));
 
-        // X positions: evenly spaced between left and right diamond (12% and 88%)
+        // X positions: left cup at 12%, middle cup & prize at center, right cup at 88%
         const leftX = app.screen.width * 0.12;
         const rightX = app.screen.width * 0.88;
+        const centerX = (leftX + rightX) / 2;
         const y = app.screen.height * 0.65;
-        // 4 objects: prize, cup1, cup2, cup3
-        const spacing = (rightX - leftX) / 3;
-        prizeSprite.x = leftX;
+
+        // Left cup
+        cupSprites[0].x = leftX;
+        cupSprites[0].y = y;
+        // Middle cup
+        cupSprites[1].x = centerX;
+        cupSprites[1].y = y;
+        // Right cup
+        cupSprites[2].x = rightX;
+        cupSprites[2].y = y;
+        // Prize (behind middle cup)
+        prizeSprite.x = centerX;
         prizeSprite.y = y;
-        for (let i = 0; i < 3; i++) {
-            cupSprites[i].x = leftX + spacing * (i + 1);
-            cupSprites[i].y = y;
-        }
     };
 
     group.layout();
