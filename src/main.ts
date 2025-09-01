@@ -1,3 +1,18 @@
+import * as rgs from "./rgs-auth";
+import { handleGameRound } from "./gameRoundHelper";
+import {
+  Application,
+  Assets,
+  Sprite,
+  Graphics,
+  Container,
+  Text,
+  TextStyle,
+} from "pixi.js";
+import { getAdjustedScale } from "./uiScaleHelper";
+import { createBGAnimationGroup } from "./BGAnimationGroup";
+import * as PIXI_SOUND from "pixi-sound";
+
 // --- Global sound effect helper for all clickable elements ---
 function addSoundToClickable(obj: Container | Sprite) {
   obj.eventMode = "static";
@@ -14,26 +29,14 @@ function addSoundToClickable(obj: Container | Sprite) {
     }
   });
 }
-import * as rgs from "./rgs-auth";
-import { handleGameRound } from "./gameRoundHelper";
-import { Application, Assets, Sprite, Graphics } from "pixi.js";
-import { createBGAnimationGroup } from "./BGAnimationGroup";
-import * as PIXI_SOUND from "pixi-sound";
 
 // Run authentication on load
 rgs.authenticate().catch(console.error);
-
-import { Container, Text, TextStyle } from "pixi.js";
-
-// --- Animation Groups ---
-let BGAnimationGroup: Container;
-let CupAnimationGroup: Container;
 
 (async () => {
   // --- Session-based sound enablement ---
   let soundEnabled = sessionStorage.getItem("soundEnabled");
   if (soundEnabled === null) {
-    // Show overlay for sound choice
     const overlay = document.createElement("div");
     overlay.style.position = "fixed";
     overlay.style.top = "0";
@@ -71,36 +74,21 @@ let CupAnimationGroup: Container;
   // --- Sound Effects with PixiJS Sound ---
   const hoverSoundUrl = new URL("./assets/sfx-hover.mp3", import.meta.url).href;
   const pressSoundUrl = new URL("./assets/sfx-press.mp3", import.meta.url).href;
-  // Register sounds
   PIXI_SOUND.default.add("hover", hoverSoundUrl);
   PIXI_SOUND.default.add("press", pressSoundUrl);
 
-  // Create a new application
+  // --- Create Pixi Application
   const app = new Application();
   await app.init({ background: "#1099bb", resizeTo: window });
 
   document.getElementById("pixi-container")!.appendChild(app.canvas);
-  // Force canvas to fill the viewport and trigger resize
-  const canvas = app.canvas;
-  canvas.style.width = "100vw";
-  canvas.style.height = "100vh";
+  app.canvas.style.width = "100vw";
+  app.canvas.style.height = "100vh";
   window.dispatchEvent(new Event("resize"));
 
-  // --- Create Animation Groups ---
-  BGAnimationGroup = new Container();
-  BGAnimationGroup.name = "BGAnimationGroup";
+  // --- Background Animation Group
+  const BGAnimationGroup = await createBGAnimationGroup(app);
   app.stage.addChild(BGAnimationGroup);
-
-  CupAnimationGroup = new Container();
-  CupAnimationGroup.name = "CupAnimationGroup";
-  app.stage.addChild(CupAnimationGroup);
-
-  // --- Render BG Animation Group ---
-  (async () => {
-    const bgGroup = await createBGAnimationGroup(app);
-    BGAnimationGroup.addChild(bgGroup);
-  })();
-
 
   // --- Loader Bar Animation ---
   const loaderFrames: Sprite[] = [];
@@ -114,79 +102,16 @@ let CupAnimationGroup: Container;
     app.stage.addChild(frame);
     loaderFrames.push(frame);
   }
-  // Show loader animation at start
   let loaderIndex = 0;
   loaderFrames[loaderIndex].visible = true;
   let loaderElapsed = 0;
   let loaderActive = true;
-  // Hide loader after 2 seconds
   setTimeout(() => {
     loaderActive = false;
     loaderFrames.forEach((f) => (f.visible = false));
   }, 2000);
 
-  // --- Replace Play Button with custom red button styled like bet input ---
-  function createRedButton(
-    label: string,
-    x: number,
-    y: number,
-    onClick: () => void,
-  ) {
-    const btn = new Container();
-    // Red background with rounded corners and shadow
-    const bgWidth = 160;
-    const bgHeight = 48;
-    const bg = new Graphics();
-    // Shadow
-    bg.beginFill(0x000000, 0.18);
-    bg.drawRoundedRect(4, 4, bgWidth, bgHeight, 18);
-    bg.endFill();
-    // Main red fill
-    bg.beginFill(0xd32f2f, 1); // Material red
-    bg.drawRoundedRect(0, 0, bgWidth, bgHeight, 18);
-    bg.endFill();
-    btn.addChild(bg);
-    // Button label
-    const txt = new Text({
-      text: label,
-      style: new TextStyle({
-        fontSize: 22,
-        fill: "#fff",
-        fontWeight: "bold",
-        dropShadow: true,
-        letterSpacing: 1.2,
-      }),
-    });
-    txt.anchor.set(0.5);
-    txt.position.set(bgWidth / 2, bgHeight / 2);
-    btn.addChild(txt);
-    btn.position.set(x, y);
-    // Only handle visual hover/press here, sound is global
-    btn.on("pointerover", () => {
-      bg.tint = 0xff5252;
-      btn.scale.set(1.08);
-    });
-    btn.on("pointerout", () => {
-      bg.tint = 0xffffff;
-      btn.scale.set(1);
-    });
-    btn.on("pointerdown", () => {
-      btn.scale.set(0.95);
-    });
-    btn.on("pointerup", () => {
-      btn.scale.set(1.08);
-    });
-    btn.on("pointerupoutside", () => {
-      btn.scale.set(1);
-    });
-    btn.on("pointertap", onClick);
-    addSoundToClickable(btn);
-    app.stage.addChild(btn);
-    return btn;
-  }
-
   // --- Bet Input Area ---
-  // Allowed bet steps
   const betSteps = [
     0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 1.2, 1.4, 1.6, 1.8, 2, 3, 4,
     5, 6, 7, 8, 9, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80,
@@ -196,44 +121,53 @@ let CupAnimationGroup: Container;
   let betIndex = betSteps.indexOf(1);
   let betValue = betSteps[betIndex];
 
-  let betInput: Container;
+  const betInput: Container = new Container();
   let betText: Text;
+
   function updateBetText() {
     betText.text = `$${betValue.toLocaleString(undefined, { minimumFractionDigits: betValue < 1 ? 2 : 0, maximumFractionDigits: 2 })}`;
   }
 
-  function createBetInput() {
-    if (betInput) app.stage.removeChild(betInput);
-    betInput = new Container();
-
-    // --- Stylish Background ---
+  function buildBetInput() {
+    betInput.removeChildren();
+    const scale = getAdjustedScale(app.screen.width, app.screen.height);
     const bg = new Graphics();
-    const bgWidth = 300;
-    const bgHeight = 60;
-    bg.beginFill(0x1a2233, 0.98); // deep blue
-    bg.drawRoundedRect(0, 0, bgWidth, bgHeight, 22);
+    const bgWidth = 300 * scale;
+    const bgHeight = 60 * scale;
+    bg.beginFill(0x1a2233, 0.98);
+    bg.drawRoundedRect(0, 0, bgWidth, bgHeight, 22 * scale);
     bg.endFill();
-    // Subtle shadow
     bg.beginFill(0x000000, 0.18);
-    bg.drawRoundedRect(6, 6, bgWidth, bgHeight, 22);
+    bg.drawRoundedRect(6 * scale, 6 * scale, bgWidth, bgHeight, 22 * scale);
     bg.endFill();
     betInput.addChild(bg);
 
-    // - button (modern look)
     const minusBtn = new Container();
     const minusBg = new Graphics();
-    minusBg.beginFill(0x28324a, 1).drawRoundedRect(0, 0, 38, 38, 12).endFill();
-    // Button shadow
+    minusBg
+      .beginFill(0x28324a, 1)
+      .drawRoundedRect(0, 0, 38 * scale, 38 * scale, 12 * scale)
+      .endFill();
     minusBg.beginFill(0x000000, 0.12);
-    minusBg.drawRoundedRect(3, 3, 38, 38, 12);
+    minusBg.drawRoundedRect(
+      3 * scale,
+      3 * scale,
+      38 * scale,
+      38 * scale,
+      12 * scale,
+    );
     minusBg.endFill();
     minusBtn.addChild(minusBg);
     const minusTxt = new Text({
       text: "-",
-      style: new TextStyle({ fontSize: 26, fill: "#fff", fontWeight: "bold" }),
+      style: new TextStyle({
+        fontSize: 26 * scale,
+        fill: "#fff",
+        fontWeight: "bold",
+      }),
     });
     minusTxt.anchor.set(0.5);
-    minusTxt.position.set(19, 19);
+    minusTxt.position.set(19 * scale, 19 * scale);
     minusBtn.addChild(minusTxt);
     addSoundToClickable(minusBtn);
     minusBtn.on("pointertap", () => {
@@ -244,34 +178,45 @@ let CupAnimationGroup: Container;
       }
     });
 
-    // Bet value text (modern style)
     betText = new Text({
       text: "",
       style: new TextStyle({
-        fontSize: 30,
+        fontSize: 30 * scale,
         fill: "#b0e0ff",
         fontWeight: "bold",
         dropShadow: true,
-        letterSpacing: 1.5,
+        letterSpacing: 1.5 * scale,
       }),
     });
     updateBetText();
     betText.anchor.set(0.5);
 
-    // + button (modern look)
     const plusBtn = new Container();
     const plusBg = new Graphics();
-    plusBg.beginFill(0x28324a, 1).drawRoundedRect(0, 0, 38, 38, 12).endFill();
+    plusBg
+      .beginFill(0x28324a, 1)
+      .drawRoundedRect(0, 0, 38 * scale, 38 * scale, 12 * scale)
+      .endFill();
     plusBg.beginFill(0x000000, 0.12);
-    plusBg.drawRoundedRect(3, 3, 38, 38, 12);
+    plusBg.drawRoundedRect(
+      3 * scale,
+      3 * scale,
+      38 * scale,
+      38 * scale,
+      12 * scale,
+    );
     plusBg.endFill();
     plusBtn.addChild(plusBg);
     const plusTxt = new Text({
       text: "+",
-      style: new TextStyle({ fontSize: 26, fill: "#fff", fontWeight: "bold" }),
+      style: new TextStyle({
+        fontSize: 26 * scale,
+        fill: "#fff",
+        fontWeight: "bold",
+      }),
     });
     plusTxt.anchor.set(0.5);
-    plusTxt.position.set(19, 19);
+    plusTxt.position.set(19 * scale, 19 * scale);
     plusBtn.addChild(plusTxt);
     addSoundToClickable(plusBtn);
     plusBtn.on("pointertap", () => {
@@ -282,37 +227,76 @@ let CupAnimationGroup: Container;
       }
     });
 
-    // Layout: minus, bet, plus tightly together, centered in bg
-    minusBtn.position.set(50, 11);
+    minusBtn.position.set(50 * scale, 11 * scale);
     betText.position.set(bgWidth / 2, bgHeight / 2);
-    plusBtn.position.set(bgWidth - 50 - 38, 11);
+    plusBtn.position.set(bgWidth - 50 * scale - 38 * scale, 11 * scale);
     betInput.addChild(minusBtn);
     betInput.addChild(betText);
     betInput.addChild(plusBtn);
-
-    // Position bet input centered above Play button and always center on resize
-    function positionBetInput() {
-      betInput.x = (app.screen.width - bgWidth) / 2;
-      betInput.y = app.screen.height - bgHeight - 32;
-    }
-    positionBetInput();
-    app.renderer.on("resize", positionBetInput);
-    app.stage.addChild(betInput);
   }
-  createBetInput();
+  buildBetInput();
+  app.stage.addChild(betInput);
 
-  // --- UI State ---
+  // --- Play Button ---
+  const playButton: Container = new Container();
+  function buildPlayButton(onClick: () => void) {
+    playButton.removeChildren();
+    const scale = getAdjustedScale(app.screen.width, app.screen.height);
+    const bgWidth = 160 * scale;
+    const bgHeight = 48 * scale;
+    const bg = new Graphics();
+    bg.beginFill(0x000000, 0.18);
+    bg.drawRoundedRect(4 * scale, 4 * scale, bgWidth, bgHeight, 18 * scale);
+    bg.endFill();
+    bg.beginFill(0xd32f2f, 1);
+    bg.drawRoundedRect(0, 0, bgWidth, bgHeight, 18 * scale);
+    bg.endFill();
+    playButton.addChild(bg);
+    const txt = new Text({
+      text: "Play",
+      style: new TextStyle({
+        fontSize: 22 * scale,
+        fill: "#fff",
+        fontWeight: "bold",
+        dropShadow: true,
+        letterSpacing: 1.2 * scale,
+      }),
+    });
+    txt.anchor.set(0.5);
+    txt.position.set(bgWidth / 2, bgHeight / 2);
+    playButton.addChild(txt);
+
+    playButton.on("pointertap", onClick);
+    playButton.on("pointerover", () => {
+      bg.tint = 0xff5252;
+      playButton.scale.set(1.08);
+    });
+    playButton.on("pointerout", () => {
+      bg.tint = 0xffffff;
+      playButton.scale.set(1);
+    });
+    playButton.on("pointerdown", () => {
+      playButton.scale.set(0.95);
+    });
+    playButton.on("pointerup", () => {
+      playButton.scale.set(1.08);
+    });
+    playButton.on("pointerupoutside", () => {
+      playButton.scale.set(1);
+    });
+    addSoundToClickable(playButton);
+  }
+  buildPlayButton(handleAutomatedRound);
+  app.stage.addChild(playButton);
+
+  // --- Balance and Sound Toggle ---
   let balance = 1000;
-
-  // --- UI: Balance Top Left ---
   const style = new TextStyle({ fontSize: 20, fill: "#fff" });
   const balanceText = new Text({ text: `Balance: $${balance}`, style });
   balanceText.anchor.set(0, 0);
   balanceText.position.set(20, 20);
-
   app.stage.addChild(balanceText);
 
-  // --- Sound Toggle Button under Balance ---
   let soundEnabledState = sessionStorage.getItem("soundEnabled") === "1";
   const soundToggle = new Container();
   const toggleBg = new Graphics();
@@ -320,13 +304,12 @@ let CupAnimationGroup: Container;
   const toggleHeight = 36;
   function drawToggleBg() {
     toggleBg.clear();
-    toggleBg.beginFill(soundEnabledState ? 0x4caf50 : 0xb71c1c, 0.95); // green if on, red if off
+    toggleBg.beginFill(soundEnabledState ? 0x4caf50 : 0xb71c1c, 0.95);
     toggleBg.drawRoundedRect(0, 0, toggleWidth, toggleHeight, 10);
     toggleBg.endFill();
   }
   drawToggleBg();
   soundToggle.addChild(toggleBg);
-  // Icon
   const iconText = new Text({
     text: soundEnabledState ? "🔊" : "🔇",
     style: new TextStyle({ fontSize: 20, fill: "#fff" }),
@@ -334,7 +317,6 @@ let CupAnimationGroup: Container;
   iconText.anchor.set(0.5);
   iconText.position.set(toggleWidth / 2, toggleHeight / 2);
   soundToggle.addChild(iconText);
-  // Make interactive
   addSoundToClickable(soundToggle);
   soundToggle.on("pointertap", () => {
     soundEnabledState = !soundEnabledState;
@@ -342,76 +324,109 @@ let CupAnimationGroup: Container;
     iconText.text = soundEnabledState ? "🔊" : "🔇";
     drawToggleBg();
   });
-  // Position under balance
-  function positionSoundToggle() {
+  app.stage.addChild(soundToggle);
+
+  // --- Centralized Layout Handler ---
+  function layoutUI() {
+    const scale = getAdjustedScale(app.screen.width, app.screen.height);
+
+    // BG animation group
+    if (typeof BGAnimationGroup.layout === "function")
+      BGAnimationGroup.layout();
+
+    // Bet Input
+    const betInputBgWidth = 300 * scale;
+    const betInputBgHeight = 60 * scale;
+    betInput.x = (app.screen.width - betInputBgWidth) / 2;
+    betInput.y = app.screen.height - betInputBgHeight - 32 * scale;
+    buildBetInput();
+
+    // Play Button
+    const buttonWidth = 160 * scale;
+    const buttonHeight = 48 * scale;
+    playButton.x = (app.screen.width - buttonWidth) / 2;
+    playButton.y = betInput.y - buttonHeight - 24 * scale;
+    buildPlayButton(handleAutomatedRound);
+
+    // Balance
+    balanceText.position.set(20, 20);
+
+    // Sound Toggle
     soundToggle.x = 20;
     soundToggle.y = balanceText.y + balanceText.height + 8;
   }
-  positionSoundToggle();
-  app.stage.addChild(soundToggle);
-  app.renderer.on("resize", positionSoundToggle);
+  app.renderer.on("resize", layoutUI);
+  layoutUI();
 
-  // --- UI: Info and Speaker Icons Top Right ---
-  // Use SVG data URIs for icons for crisp scaling
-
-  // Helper to create a stylized PixiJS button with icon
-  function createPixiButton(yOffset: number, onClick: () => void): Container {
-    const button = new Container();
-    const icon = new Text({
-      text: "i",
-      style: new TextStyle({
-        fontSize: 22,
-        fill: "#fff",
-        fontWeight: "bold",
-        fontFamily: "Arial",
-        align: "center",
-      }),
-    });
-    // Responsive size
-    function resizeButton() {
-      // Force fixed size for the info button
-      const size = 40;
-      button.width = size;
-      button.height = size;
-      button.position.set(app.screen.width - size - 20, 20 + yOffset);
-      icon.style.fontSize = size * 0.6;
-      icon.anchor.set(0.5);
-      icon.position.set(size / 2, size / 2);
-      bg.clear();
-      bg.beginFill(0x222a38, 0.95);
-      bg.drawRoundedRect(0, 0, size, size, size * 0.25);
-      bg.endFill();
-      // Shadow
-      bg.beginFill(0x000000, 0.15);
-      bg.drawRoundedRect(4, 4, size, size, size * 0.25);
-      bg.endFill();
+  // --- Animate loader ---
+  app.ticker.add((time) => {
+    if (loaderActive) {
+      loaderElapsed += time.deltaMS;
+      if (loaderElapsed > 120) {
+        loaderFrames[loaderIndex].visible = false;
+        loaderIndex = (loaderIndex + 1) % loaderFrames.length;
+        loaderFrames[loaderIndex].visible = true;
+        loaderElapsed = 0;
+      }
     }
-    // Background
-    const bg = new Graphics();
-    button.addChild(bg);
-    button.addChild(icon);
-    addSoundToClickable(button);
-    // Hover effect
-    button.on("pointerover", () => {
-      bg.tint = 0x009aff;
-      button.scale.set(1.08);
-    });
-    button.on("pointerout", () => {
-      bg.tint = 0xffffff;
-      button.scale.set(1);
-    });
-    button.on("pointertap", onClick);
-    resizeButton();
-    app.stage.addChild(button);
-    app.renderer.on("resize", resizeButton);
-    return button;
+  });
+
+  // --- Play logic and API hooks ---
+  async function onCupPick() {
+    await new Promise((resolve) => setTimeout(resolve, 500));
   }
 
-  // Info button (only create if screen is large enough)
-  if (window.innerWidth > 400 && window.innerHeight > 300) {
-    createPixiButton(0, showInfoModal);
-    // Dispatch a resize event to force correct rendering immediately
-    window.dispatchEvent(new Event("resize"));
+  function onRest() {}
+
+  function onBalanceUpdate(endRoundResponse: { balance: { amount: number } }) {
+    if (
+      endRoundResponse &&
+      endRoundResponse.balance &&
+      typeof endRoundResponse.balance.amount === "number"
+    ) {
+      balance = endRoundResponse.balance.amount / 1000000;
+    }
+    balanceText.text = `Balance: $${balance}`;
+  }
+
+  async function playApiCall(): Promise<{
+    result: "win" | "loss";
+    balance: { amount: number };
+    round: { payoutMultiplier?: number };
+  }> {
+    const playResp = await rgs.getBookResponse();
+    if (
+      playResp &&
+      playResp.balance &&
+      typeof playResp.balance.amount === "number"
+    ) {
+      balance = playResp.balance.amount / 1000000;
+    }
+    return {
+      result:
+        playResp.round &&
+        playResp.round.payoutMultiplier &&
+        playResp.round.payoutMultiplier > 0
+          ? "win"
+          : "loss",
+      balance: playResp.balance,
+      round: playResp.round,
+    };
+  }
+
+  async function endRoundApiCall(): Promise<{ balance: { amount: number } }> {
+    await rgs.endRound();
+    return rgs.endRoundResponse || { balance: { amount: balance * 1000000 } };
+  }
+
+  async function handleAutomatedRound() {
+    await handleGameRound({
+      playApiCall,
+      endRoundApiCall,
+      onCupPick,
+      onRest,
+      onBalanceUpdate,
+    });
   }
 
   // --- Info Modal ---
@@ -419,7 +434,6 @@ let CupAnimationGroup: Container;
   function showInfoModal() {
     if (infoModal) return;
     infoModal = new Container();
-    // Modal background (bigger)
     const modalWidth = app.screen.width * 0.92;
     const modalHeight = app.screen.height * 0.7;
     const bg = new Graphics();
@@ -427,7 +441,7 @@ let CupAnimationGroup: Container;
     bg.drawRoundedRect(0, 0, modalWidth, modalHeight, 32);
     bg.endFill();
     infoModal.addChild(bg);
-    // Scrollable text area
+
     const scrollArea = new Container();
     const scrollMask = new Graphics();
     scrollMask.beginFill(0xffffff);
@@ -435,7 +449,7 @@ let CupAnimationGroup: Container;
     scrollMask.endFill();
     scrollArea.mask = scrollMask;
     scrollArea.addChild(scrollMask);
-    // Modal text
+
     const infoText = new Text({
       text:
         "Molly’s Cups 10X – Game Information\n\n" +
@@ -469,7 +483,7 @@ let CupAnimationGroup: Container;
     scrollArea.position.set(40, 40);
     infoModal.addChild(scrollArea);
     scrollArea.addChild(scrollMask);
-    // Scroll logic
+
     let scrollY = 0;
     const maxScroll = Math.max(0, infoText.height - (modalHeight - 60));
     scrollArea.interactive = true;
@@ -479,7 +493,7 @@ let CupAnimationGroup: Container;
       scrollY = Math.max(Math.min(scrollY, 0), -maxScroll);
       infoText.position.y = scrollY;
     });
-    // Close button
+
     const closeBtn = new Text({
       text: "Close",
       style: new TextStyle({ fontSize: 20, fill: "#ffb", fontWeight: "bold" }),
@@ -492,12 +506,65 @@ let CupAnimationGroup: Container;
       infoModal = null;
     });
     infoModal.addChild(closeBtn);
-    // Center modal
+
     infoModal.position.set(
       (app.screen.width - bg.width) / 2,
       (app.screen.height - bg.height) / 2,
     );
     app.stage.addChild(infoModal);
+  }
+
+  function createPixiButton(yOffset: number, onClick: () => void): Container {
+    const button = new Container();
+    const icon = new Text({
+      text: "i",
+      style: new TextStyle({
+        fontSize: 22,
+        fill: "#fff",
+        fontWeight: "bold",
+        fontFamily: "Arial",
+        align: "center",
+      }),
+    });
+    function resizeButton() {
+      const size = 40;
+      button.width = size;
+      button.height = size;
+      button.position.set(app.screen.width - size - 20, 20 + yOffset);
+      icon.style.fontSize = size * 0.6;
+      icon.anchor.set(0.5);
+      icon.position.set(size / 2, size / 2);
+      bg.clear();
+      bg.beginFill(0x222a38, 0.95);
+      bg.drawRoundedRect(0, 0, size, size, size * 0.25);
+      bg.endFill();
+      bg.beginFill(0x000000, 0.15);
+      bg.drawRoundedRect(4, 4, size, size, size * 0.25);
+      bg.endFill();
+    }
+    const bg = new Graphics();
+    button.addChild(bg);
+    button.addChild(icon);
+    addSoundToClickable(button);
+    button.on("pointerover", () => {
+      bg.tint = 0x009aff;
+      button.scale.set(1.08);
+    });
+    button.on("pointerout", () => {
+      bg.tint = 0xffffff;
+      button.scale.set(1);
+    });
+    button.on("pointertap", onClick);
+    resizeButton();
+    app.stage.addChild(button);
+    app.renderer.on("resize", resizeButton);
+    return button;
+  }
+
+  // Info button (only create if screen is large enough)
+  if (window.innerWidth > 400 && window.innerHeight > 300) {
+    createPixiButton(0, showInfoModal);
+    window.dispatchEvent(new Event("resize"));
   }
 
   // Responsive: update icon positions and modal on resize
@@ -508,136 +575,6 @@ let CupAnimationGroup: Container;
         (app.screen.width - infoModal.width) / 2,
         (app.screen.height - infoModal.height) / 2,
       );
-    }
-  });
-
-  function createButton(
-    label: string,
-    x: number,
-    y: number,
-    onClick: () => void,
-  ) {
-    // Use the new red button style
-    return createRedButton(label, x, y, () => {
-      if (sessionStorage.getItem("soundEnabled") === "1") {
-        PIXI_SOUND.default.play("press");
-      }
-      onClick();
-    });
-  }
-
-  // --- Helper for cup pick ---
-  async function onCupPick() {
-    // Simulate or implement cup pick UI logic here
-    // For now, just a placeholder delay
-    await new Promise((resolve) => setTimeout(resolve, 500));
-  }
-
-  // --- Helper for rest state ---
-  function onRest() {
-    // Set game state to rest, update UI as needed
-    // No round win display anymore
-  }
-
-  // --- Helper for balance update ---
-  function onBalanceUpdate(endRoundResponse: { balance: { amount: number } }) {
-    if (
-      endRoundResponse &&
-      endRoundResponse.balance &&
-      typeof endRoundResponse.balance.amount === "number"
-    ) {
-      balance = endRoundResponse.balance.amount / 1000000;
-    }
-    balanceText.text = `Balance: $${balance}`;
-  }
-
-  // --- Mapping PlayResponse to helper format ---
-  async function playApiCall(): Promise<{
-    result: "win" | "loss";
-    balance: { amount: number };
-    round: { payoutMultiplier?: number };
-  }> {
-    const playResp = await rgs.getBookResponse();
-    if (
-      playResp &&
-      playResp.balance &&
-      typeof playResp.balance.amount === "number"
-    ) {
-      balance = playResp.balance.amount / 1000000;
-    }
-    // No round win display anymore
-    // Map to expected structure
-    return {
-      result:
-        playResp.round &&
-          playResp.round.payoutMultiplier &&
-          playResp.round.payoutMultiplier > 0
-          ? "win"
-          : "loss",
-      balance: playResp.balance,
-      round: playResp.round,
-    };
-  }
-
-  // --- Mapping endRound to helper format ---
-  async function endRoundApiCall(): Promise<{ balance: { amount: number } }> {
-    await rgs.endRound();
-    // Fallback to a default if null (should not happen if API is correct)
-    return rgs.endRoundResponse || { balance: { amount: balance * 1000000 } };
-  }
-
-  async function handleAutomatedRound() {
-    await handleGameRound({
-      playApiCall,
-      endRoundApiCall,
-      onCupPick,
-      onRest,
-      onBalanceUpdate,
-    });
-  }
-
-  // --- Add Buttons ---
-  // Play button: always centered horizontally, clamped to 20% from the bottom
-  const buttonWidth = 160;
-  const buttonHeight = 48;
-  const betInputBgHeight = 60;
-  const betInputMarginBottom = 32;
-  const playButtonMargin = 24; // space between play button and bet input
-  let playButton: Container | null = null;
-  function positionPlayButton() {
-    if (playButton) {
-      playButton.x = app.screen.width / 2 - buttonWidth / 2;
-      playButton.y =
-        app.screen.height -
-        betInputBgHeight -
-        betInputMarginBottom -
-        buttonHeight -
-        playButtonMargin;
-    }
-  }
-  playButton = createButton(
-    "Play",
-    app.screen.width / 2 - buttonWidth / 2,
-    // Y position will be set by positionPlayButton
-    0,
-    handleAutomatedRound,
-  );
-  positionPlayButton();
-  app.renderer.on("resize", positionPlayButton);
-  // Removed End Round button; all logic is now automated
-  // Show End Round Response button is not needed visually, but you can add it back if you want
-
-  // Animate engine and loader
-  app.ticker.add((time) => {
-    // Loader animation
-    if (loaderActive) {
-      loaderElapsed += time.deltaMS;
-      if (loaderElapsed > 120) {
-        loaderFrames[loaderIndex].visible = false;
-        loaderIndex = (loaderIndex + 1) % loaderFrames.length;
-        loaderFrames[loaderIndex].visible = true;
-        loaderElapsed = 0;
-      }
     }
   });
 })();
