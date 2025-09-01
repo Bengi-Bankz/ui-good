@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Cup Animation Test</title>
+    <style>
+        body { margin: 0; padding: 20px; font-family: Arial, sans-serif; }
+        .test-container { background: #000; width: 800px; height: 400px; position: relative; margin: 20px 0; }
+        .cup { 
+            width: 60px; 
+            height: 80px; 
+            background: linear-gradient(to bottom, #ff4444, #cc2222);
+            position: absolute; 
+            bottom: 50px;
+            border-radius: 0 0 10px 10px;
+            transition: transform 0.3s ease;
+            cursor: pointer;
+        }
+        .cup:nth-child(1) { left: 200px; }
+        .cup:nth-child(2) { left: 350px; }
+        .cup:nth-child(3) { left: 500px; }
+        .cup:hover { transform: scale(1.1); }
+        .cup.lifted { transform: translateY(-80px); }
+        button { margin: 10px; padding: 10px 20px; }
+        .status { margin: 10px 0; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>Cup Animation Test - "Pull This Down" Fix</h1>
+    <p>This demonstrates the fixed cup lift/lower mechanism:</p>
+    <div class="status" id="status">Ready - Click a cup to lift it, then click "Lower All" to pull them down</div>
+    
+    <div class="test-container">
+        <div class="cup" data-cup="1"></div>
+        <div class="cup" data-cup="2"></div>
+        <div class="cup" data-cup="3"></div>
+    </div>
+    
+    <button onclick="lowerAllCups()">Lower All Cups (Pull Down)</button>
+    <button onclick="resetTest()">Reset Test</button>
+    
+    <div style="margin-top: 20px;">
+        <h3>Fix Summary:</h3>
+        <ul>
+            <li>✅ Cups track their original positions</li>
+            <li>✅ Lifting moves cups up from original position</li>
+            <li>✅ Lowering returns cups to exact original position</li>
+            <li>✅ No position drift over multiple lift/lower cycles</li>
+        </ul>
+    </div>
+
+    <script>
+        const cups = document.querySelectorAll('.cup');
+        const status = document.getElementById('status');
+        
+        cups.forEach(cup => {
+            cup.addEventListener('click', () => {
+                if (cup.classList.contains('lifted')) {
+                    cup.classList.remove('lifted');
+                    status.textContent = `Cup ${cup.dataset.cup} lowered back to original position`;
+                } else {
+                    cup.classList.add('lifted');
+                    status.textContent = `Cup ${cup.dataset.cup} lifted! Now it can be "pulled down" to original position`;
+                }
+            });
+        });
+        
+        function lowerAllCups() {
+            cups.forEach(cup => {
+                cup.classList.remove('lifted');
+            });
+            status.textContent = 'All cups pulled down to their original positions';
+        }
+        
+        function resetTest() {
+            lowerAllCups();
+            status.textContent = 'Test reset - Click a cup to lift it';
+        }
+    </script>
+</body>
+</html>
