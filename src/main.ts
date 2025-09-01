@@ -11,6 +11,7 @@ import {
 } from "pixi.js";
 import { getAdjustedScale } from "./uiScaleHelper";
 import { createBGAnimationGroup, LayoutContainer } from "./BGAnimationGroup";
+import { createForegroundAnimationGroup } from "./ForegroundAnimationGroup";
 import * as PIXI_SOUND from "pixi-sound";
 
 // --- Global sound effect helper for all clickable elements ---
@@ -89,6 +90,10 @@ rgs.authenticate().catch(console.error);
   // --- Background Animation Group
   const BGAnimationGroup: LayoutContainer = await createBGAnimationGroup(app);
   app.stage.addChild(BGAnimationGroup);
+
+  // --- Foreground Animation Group
+  const ForegroundAnimationGroup: LayoutContainer = await createForegroundAnimationGroup(app);
+  app.stage.addChild(ForegroundAnimationGroup);
 
   // --- Loader Bar Animation ---
   const loaderFrames: Sprite[] = [];
@@ -334,6 +339,10 @@ rgs.authenticate().catch(console.error);
     // BG animation group
     if (typeof BGAnimationGroup.layout === "function")
       BGAnimationGroup.layout();
+
+    // Foreground animation group
+    if (typeof ForegroundAnimationGroup.layout === "function")
+      ForegroundAnimationGroup.layout();
 
     // Bet Input
     const betInputBgWidth = 300 * scale;
