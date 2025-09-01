@@ -11,6 +11,7 @@ import {
 } from "pixi.js";
 import { getAdjustedScale } from "./uiScaleHelper";
 import { createBGAnimationGroup, LayoutContainer } from "./BGAnimationGroup";
+import { AnimationLogic, createCupGameSequence } from "./AnimationLogic";
 import { createForegroundAnimationGroup } from "./ForegroundAnimationGroup";
 import * as PIXI_SOUND from "pixi-sound";
 
@@ -92,7 +93,7 @@ rgs.authenticate().catch(console.error);
   app.stage.addChild(BGAnimationGroup);
 
   // --- Foreground Animation Group
-  const ForegroundAnimationGroup: LayoutContainer = await createForegroundAnimationGroup(app);
+  const ForegroundAnimationGroup = await createForegroundAnimationGroup(app);
   app.stage.addChild(ForegroundAnimationGroup);
 
   // --- Loader Bar Animation ---
@@ -295,10 +296,65 @@ rgs.authenticate().catch(console.error);
   }
 
   buildStyledButton(playButton, "Play", 0xd32f2f, handleAutomatedRound);
-  buildStyledButton(startButton, "Start", 0xd32f2f, () => {
-    // Lennox button logic here
-    alert("Lennox Start button clicked!");
-  });
+  buildStyledButton(startButton, "Start", 0xd32f2f, startGameRound);
+
+  // Entry point for animation and game round manager
+  async function startGameRound() {
+    // 1. Trigger animation sequence (placeholder)
+    await runAnimationSequence();
+    // 2. Call game round manager (not direct API)
+    const playResponse = await handleGameRoundManager();
+    // 3. Handle play response and continue animation (placeholder)
+    await handlePlayResponse(playResponse);
+  }
+
+  // Placeholder for animation sequence
+  // Animation logic instance
+  const animationLogic = new AnimationLogic();
+
+  // Simple shuffle animation: move cups left/right 6 times
+  // Diamond sprite for reveal (create or load as needed)
+  const diamondTexture = await Assets.load(new URL("./assets/diamond (1).png", import.meta.url).href);
+  const diamondSprite = new Sprite(diamondTexture);
+  diamondSprite.anchor.set(0.5, 1);
+  diamondSprite.visible = false;
+  ForegroundAnimationGroup.addChild(diamondSprite);
+
+  // Animation sequence using AnimationLogic
+  async function runAnimationSequence() {
+    const anim = createCupGameSequence(
+      ForegroundAnimationGroup.cupSprites,
+      ForegroundAnimationGroup.prizeSprite,
+      diamondSprite,
+      ForegroundAnimationGroup,
+      () => {
+        // Make cups clickable here
+        ForegroundAnimationGroup.cupSprites.forEach(cup => {
+          cup.eventMode = "static";
+          cup.cursor = "pointer";
+          cup.interactive = true;
+        });
+      }
+    );
+    await anim.runSequence();
+    // Reset cup positions after shuffle if needed
+    if (typeof ForegroundAnimationGroup.layout === "function") ForegroundAnimationGroup.layout();
+  }
+
+  // Placeholder for game round manager call
+  async function handleGameRoundManager() {
+    // TODO: Integrate with your game round manager logic
+    console.log("Game round manager called");
+    // Simulate response
+    return { result: "win", payoutMultiplier: 10, chosenCup: 1 };
+  }
+
+  // Placeholder for play response handling
+  async function handlePlayResponse(response: any) {
+    // TODO: Implement animation and logic for win/loss
+    console.log("Play response received", response);
+    await new Promise(resolve => setTimeout(resolve, 1000));
+  }
   app.stage.addChild(playButton);
   app.stage.addChild(startButton);
   // --- Balance and Sound Toggle ---
@@ -367,9 +423,7 @@ rgs.authenticate().catch(console.error);
     playButton.x = startButton.x + buttonWidth + buttonSpacing;
     playButton.y = startButton.y;
     buildStyledButton(playButton, "Play", 0xd32f2f, handleAutomatedRound);
-    buildStyledButton(startButton, "Start", 0xd32f2f, () => {
-      alert("Lennox Start button clicked!");
-    });
+    buildStyledButton(startButton, "Start", 0xd32f2f, startGameRound);
 
     // Balance
     balanceText.position.set(20, 20);

@@ -7,7 +7,10 @@ export interface LayoutContainer extends Container {
 
 export async function createForegroundAnimationGroup(
     app: Application,
-): Promise<LayoutContainer> {
+): Promise<LayoutContainer & {
+    cupSprites: Sprite[];
+    prizeSprite: Sprite;
+}> {
     const group = new Container() as LayoutContainer;
     group.name = "ForegroundAnimationGroup";
     group.zIndex = 1;
@@ -42,7 +45,7 @@ export async function createForegroundAnimationGroup(
         prizeSprite.scale.set(scale);
         cupSprites.forEach((cup) => cup.scale.set(scale));
 
-        // X positions: left cup at 12%, middle cup & prize at center, right cup at 88%
+        // X positions: left cup at 30%, middle cup & prize at center, right cup at 70%
         const leftX = app.screen.width * 0.30;
         const rightX = app.screen.width * 0.70;
         const centerX = (leftX + rightX) / 2;
@@ -64,5 +67,6 @@ export async function createForegroundAnimationGroup(
 
     group.layout();
 
-    return group;
+    // Attach references for animation logic
+    return Object.assign(group, { cupSprites, prizeSprite });
 }
