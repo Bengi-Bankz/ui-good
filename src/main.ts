@@ -242,12 +242,13 @@ rgs.authenticate().catch(console.error);
   buildBetInput();
   app.stage.addChild(betInput);
 
-  // --- Play Button ---
+  // --- Play and Start Buttons ---
   const playButton: Container = new Container();
-  function buildPlayButton(onClick: () => void) {
-    playButton.removeChildren();
-    playButton.removeAllListeners("pointertap"); // Fix: Prevent multiple event handlers
+  const startButton: Container = new Container();
 
+  function buildStyledButton(button: Container, label: string, color: number, onClick: () => void) {
+    button.removeChildren();
+    button.removeAllListeners("pointertap");
     const scale = getAdjustedScale(app.screen.width, app.screen.height);
     const bgWidth = 160 * scale;
     const bgHeight = 48 * scale;
@@ -255,12 +256,12 @@ rgs.authenticate().catch(console.error);
     bg.beginFill(0x000000, 0.18);
     bg.drawRoundedRect(4 * scale, 4 * scale, bgWidth, bgHeight, 18 * scale);
     bg.endFill();
-    bg.beginFill(0xd32f2f, 1);
+    bg.beginFill(color, 1);
     bg.drawRoundedRect(0, 0, bgWidth, bgHeight, 18 * scale);
     bg.endFill();
-    playButton.addChild(bg);
+    button.addChild(bg);
     const txt = new Text({
-      text: "Play",
+      text: label,
       style: new TextStyle({
         fontSize: 22 * scale,
         fill: "#fff",
@@ -271,30 +272,35 @@ rgs.authenticate().catch(console.error);
     });
     txt.anchor.set(0.5);
     txt.position.set(bgWidth / 2, bgHeight / 2);
-    playButton.addChild(txt);
-
-    playButton.on("pointertap", onClick);
-    playButton.on("pointerover", () => {
+    button.addChild(txt);
+    button.on("pointertap", onClick);
+    button.on("pointerover", () => {
       bg.tint = 0xff5252;
-      playButton.scale.set(1.08);
+      button.scale.set(1.08);
     });
-    playButton.on("pointerout", () => {
+    button.on("pointerout", () => {
       bg.tint = 0xffffff;
-      playButton.scale.set(1);
+      button.scale.set(1);
     });
-    playButton.on("pointerdown", () => {
-      playButton.scale.set(0.95);
+    button.on("pointerdown", () => {
+      button.scale.set(0.95);
     });
-    playButton.on("pointerup", () => {
-      playButton.scale.set(1.08);
+    button.on("pointerup", () => {
+      button.scale.set(1.08);
     });
-    playButton.on("pointerupoutside", () => {
-      playButton.scale.set(1);
+    button.on("pointerupoutside", () => {
+      button.scale.set(1);
     });
-    addSoundToClickable(playButton);
+    addSoundToClickable(button);
   }
-  buildPlayButton(handleAutomatedRound);
+
+  buildStyledButton(playButton, "Play", 0xd32f2f, handleAutomatedRound);
+  buildStyledButton(startButton, "Start", 0xd32f2f, () => {
+    // Lennox button logic here
+    alert("Lennox Start button clicked!");
+  });
   app.stage.addChild(playButton);
+  app.stage.addChild(startButton);
   // --- Balance and Sound Toggle ---
   let balance = 1000;
   const style = new TextStyle({ fontSize: 20, fill: "#fff" });
@@ -351,12 +357,19 @@ rgs.authenticate().catch(console.error);
     betInput.y = app.screen.height - betInputBgHeight - 32 * scale;
     buildBetInput();
 
-    // Play Button
+    // Play & Start Buttons
     const buttonWidth = 160 * scale;
     const buttonHeight = 48 * scale;
-    playButton.x = (app.screen.width - buttonWidth) / 2;
-    playButton.y = betInput.y - buttonHeight - 24 * scale;
-    buildPlayButton(handleAutomatedRound);
+    const buttonSpacing = 32 * scale;
+    const totalWidth = buttonWidth * 2 + buttonSpacing;
+  startButton.x = (app.screen.width - totalWidth) / 2;
+  startButton.y = betInput.y - buttonHeight - 24 * scale;
+  playButton.x = startButton.x + buttonWidth + buttonSpacing;
+  playButton.y = startButton.y;
+    buildStyledButton(playButton, "Play", 0xd32f2f, handleAutomatedRound);
+    buildStyledButton(startButton, "Start", 0xd32f2f, () => {
+      alert("Lennox Start button clicked!");
+    });
 
     // Balance
     balanceText.position.set(20, 20);
