@@ -1,5 +1,5 @@
-import * as rgs from "./rgs-auth";
 import { handleGameRound } from "./gameRoundHelper";
+import { authenticate } from "./rgs-auth";
 import {
   Application,
   Assets,
@@ -11,7 +11,7 @@ import {
 } from "pixi.js";
 import { getAdjustedScale } from "./uiScaleHelper";
 import { createBGAnimationGroup, LayoutContainer } from "./BGAnimationGroup";
-import { AnimationLogic, createCupGameSequence } from "./AnimationLogic";
+import { createCupGameSequence } from "./AnimationLogic";
 import { createForegroundAnimationGroup } from "./ForegroundAnimationGroup";
 import * as PIXI_SOUND from "pixi-sound";
 
@@ -32,8 +32,8 @@ function addSoundToClickable(obj: Container | Sprite) {
   });
 }
 
-// Run authentication on load
-rgs.authenticate().catch(console.error);
+// Authenticate wallet/session on load
+authenticate().catch(console.error);
 
 (async () => {
   // --- Session-based sound enablement ---
@@ -244,59 +244,100 @@ rgs.authenticate().catch(console.error);
   app.stage.addChild(betInput);
 
   // --- Play and Start Buttons ---
-  const playButton: Container = new Container();
-  const startButton: Container = new Container();
+  // Combined Play/Start Button
+  const playStartButton: Container = new Container();
+  let playStartButtonBg: Graphics;
+  let playStartButtonTxt: Text;
+  let playStartButtonDisabled = false;
+  let playStartButtonState: "ready" | "waiting" | "choose" = "ready";
 
-  function buildStyledButton(button: Container, label: string, color: number, onClick: () => void) {
-    button.removeChildren();
-    button.removeAllListeners("pointertap");
+  function buildPlayStartButton() {
+    playStartButton.removeChildren();
+    playStartButton.removeAllListeners("pointertap");
     const scale = getAdjustedScale(app.screen.width, app.screen.height);
-    const bgWidth = 160 * scale;
+    const bgWidth = 352 * scale; // 160*2 + 32 spacing
     const bgHeight = 48 * scale;
-    const bg = new Graphics();
-    bg.beginFill(0x000000, 0.18);
-    bg.drawRoundedRect(4 * scale, 4 * scale, bgWidth, bgHeight, 18 * scale);
-    bg.endFill();
-    bg.beginFill(color, 1);
-    bg.drawRoundedRect(0, 0, bgWidth, bgHeight, 18 * scale);
-    bg.endFill();
-    button.addChild(bg);
-    const txt = new Text({
-      text: label,
+    playStartButtonBg = new Graphics();
+    playStartButtonBg.beginFill(0x000000, 0.18);
+    playStartButtonBg.drawRoundedRect(4 * scale, 4 * scale, bgWidth, bgHeight, 18 * scale);
+    playStartButtonBg.endFill();
+    playStartButtonBg.beginFill(0xd32f2f, 1);
+    playStartButtonBg.drawRoundedRect(0, 0, bgWidth, bgHeight, 18 * scale);
+    playStartButtonBg.endFill();
+    playStartButton.addChild(playStartButtonBg);
+    let buttonText = "Play / Start";
+    let buttonFill = "#fff";
+    if (playStartButtonState === "waiting") {
+      buttonText = "Choose a Cup";
+      buttonFill = "#ffd700";
+    } else if (playStartButtonDisabled) {
+      buttonText = "Play / Start";
+      buttonFill = "#aaa";
+    }
+    playStartButtonTxt = new Text({
+      text: buttonText,
       style: new TextStyle({
         fontSize: 22 * scale,
-        fill: "#fff",
+        fill: buttonFill,
         fontWeight: "bold",
         dropShadow: true,
         letterSpacing: 1.2 * scale,
       }),
     });
-    txt.anchor.set(0.5);
-    txt.position.set(bgWidth / 2, bgHeight / 2);
-    button.addChild(txt);
-    button.on("pointertap", onClick);
-    button.on("pointerover", () => {
-      bg.tint = 0xff5252;
-      button.scale.set(1.08);
-    });
-    button.on("pointerout", () => {
-      bg.tint = 0xffffff;
-      button.scale.set(1);
-    });
-    button.on("pointerdown", () => {
-      button.scale.set(0.95);
-    });
-    button.on("pointerup", () => {
-      button.scale.set(1.08);
-    });
-    button.on("pointerupoutside", () => {
-      button.scale.set(1);
-    });
-    addSoundToClickable(button);
+    playStartButtonTxt.anchor.set(0.5);
+    playStartButtonTxt.position.set(bgWidth / 2, bgHeight / 2);
+    playStartButton.addChild(playStartButtonTxt);
+    playStartButton.eventMode = playStartButtonDisabled ? "none" : "static";
+    playStartButton.cursor = playStartButtonDisabled ? "default" : "pointer";
+    if (!playStartButtonDisabled) {
+      playStartButton.on("pointertap", async () => {
+        setPlayStartButtonDisabled(true);
+        playStartButtonState = "waiting";
+        buildPlayStartButton();
+        await runAnimationSequence();
+        // Button says "Choose a Cup" while waiting for user pick
+        await handleGameRound({
+          ForegroundAnimationGroup,
+          diamondSprite,
+          liftCup,
+          lowerCup,
+          onRest: () => {
+            setPlayStartButtonDisabled(false);
+            playStartButtonState = "ready";
+            buildPlayStartButton();
+          },
+          onBalanceUpdate,
+          balanceText,
+        });
+        // onRest will re-enable and reset button text
+      });
+      playStartButton.on("pointerover", () => {
+        playStartButtonBg.tint = 0xff5252;
+        playStartButton.scale.set(1.08);
+      });
+      playStartButton.on("pointerout", () => {
+        playStartButtonBg.tint = 0xffffff;
+        playStartButton.scale.set(1);
+      });
+      playStartButton.on("pointerdown", () => {
+        playStartButton.scale.set(0.95);
+      });
+      playStartButton.on("pointerup", () => {
+        playStartButton.scale.set(1.08);
+      });
+      playStartButton.on("pointerupoutside", () => {
+        playStartButton.scale.set(1);
+      });
+    }
+    addSoundToClickable(playStartButton);
   }
 
-  buildStyledButton(playButton, "Play", 0xd32f2f, handleAutomatedRound);
-  buildStyledButton(startButton, "Start", 0xd32f2f, startGameRound);
+  function setPlayStartButtonDisabled(disabled: boolean) {
+    playStartButtonDisabled = disabled;
+    buildPlayStartButton();
+  }
+
+  buildPlayStartButton();
 
   // Entry point for animation and game round manager
   async function startGameRound() {
@@ -309,18 +350,20 @@ rgs.authenticate().catch(console.error);
   }
 
   // Placeholder for animation sequence
-  // Animation logic instance
-  const animationLogic = new AnimationLogic();
 
   // Simple shuffle animation: move cups left/right 6 times
   // Diamond sprite for reveal (create or load as needed)
-  const diamondTexture = await Assets.load(new URL("./assets/diamond (1).png", import.meta.url).href);
+  const diamondTexture = await Assets.load(
+    new URL("./assets/diamond (1).png", import.meta.url).href,
+  );
   const diamondSprite = new Sprite(diamondTexture);
   diamondSprite.anchor.set(0.5, 1);
   diamondSprite.visible = false;
   ForegroundAnimationGroup.addChild(diamondSprite);
 
   // Animation sequence using AnimationLogic
+  // --- Cup click and win/loss logic ---
+
   async function runAnimationSequence() {
     const anim = createCupGameSequence(
       ForegroundAnimationGroup.cupSprites,
@@ -329,16 +372,58 @@ rgs.authenticate().catch(console.error);
       ForegroundAnimationGroup,
       () => {
         // Make cups clickable here
-        ForegroundAnimationGroup.cupSprites.forEach(cup => {
+        ForegroundAnimationGroup.cupSprites.forEach((cup) => {
           cup.eventMode = "static";
           cup.cursor = "pointer";
           cup.interactive = true;
+          cup.removeAllListeners();
         });
-      }
+      },
     );
     await anim.runSequence();
     // Reset cup positions after shuffle if needed
-    if (typeof ForegroundAnimationGroup.layout === "function") ForegroundAnimationGroup.layout();
+    if (typeof ForegroundAnimationGroup.layout === "function")
+      ForegroundAnimationGroup.layout();
+  }
+
+  // onCupPick is now handled by the abstraction via handleGameRound
+
+  // Animation helpers (should match AnimationLogic)
+  function liftCup(cup: Sprite, liftHeight = 80, duration = 220) {
+    return new Promise<void>((resolve) => {
+      const startY = cup.y;
+      let t = 0;
+      function animate() {
+        t += 16;
+        cup.y =
+          startY - liftHeight * Math.sin(Math.PI * Math.min(t / duration, 1));
+        cup.zIndex = 10;
+        if (t < duration) {
+          requestAnimationFrame(animate);
+        } else {
+          resolve();
+        }
+      }
+      animate();
+    });
+  }
+  function lowerCup(cup: Sprite, liftHeight = 80, duration = 220) {
+    return new Promise<void>((resolve) => {
+      const startY = cup.y;
+      let t = 0;
+      function animate() {
+        t += 16;
+        cup.y =
+          startY + liftHeight * Math.sin(Math.PI * Math.min(t / duration, 1));
+        cup.zIndex = 1;
+        if (t < duration) {
+          requestAnimationFrame(animate);
+        } else {
+          resolve();
+        }
+      }
+      animate();
+    });
   }
 
   // Placeholder for game round manager call
@@ -350,13 +435,16 @@ rgs.authenticate().catch(console.error);
   }
 
   // Placeholder for play response handling
-  async function handlePlayResponse(response: any) {
+  async function handlePlayResponse(response: {
+    result: string;
+    payoutMultiplier?: number;
+    chosenCup?: number;
+  }) {
     // TODO: Implement animation and logic for win/loss
     console.log("Play response received", response);
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise((resolve) => setTimeout(resolve, 1000));
   }
-  app.stage.addChild(playButton);
-  app.stage.addChild(startButton);
+  app.stage.addChild(playStartButton);
   // --- Balance and Sound Toggle ---
   let balance = 1000;
   const style = new TextStyle({ fontSize: 20, fill: "#fff" });
@@ -413,17 +501,12 @@ rgs.authenticate().catch(console.error);
     betInput.y = app.screen.height - betInputBgHeight - 32 * scale;
     buildBetInput();
 
-    // Play & Start Buttons
-    const buttonWidth = 160 * scale;
-    const buttonHeight = 48 * scale;
-    const buttonSpacing = 32 * scale;
-    const totalWidth = buttonWidth * 2 + buttonSpacing;
-    startButton.x = (app.screen.width - totalWidth) / 2;
-    startButton.y = betInput.y - buttonHeight - 24 * scale;
-    playButton.x = startButton.x + buttonWidth + buttonSpacing;
-    playButton.y = startButton.y;
-    buildStyledButton(playButton, "Play", 0xd32f2f, handleAutomatedRound);
-    buildStyledButton(startButton, "Start", 0xd32f2f, startGameRound);
+  // Play/Start Button
+  const buttonWidth = 352 * scale;
+  const buttonHeight = 48 * scale;
+  playStartButton.x = (app.screen.width - buttonWidth) / 2;
+  playStartButton.y = betInput.y - buttonHeight - 24 * scale;
+  buildPlayStartButton();
 
     // Balance
     balanceText.position.set(20, 20);
@@ -449,9 +532,7 @@ rgs.authenticate().catch(console.error);
   });
 
   // --- Play logic and API hooks ---
-  async function onCupPick() {
-    await new Promise((resolve) => setTimeout(resolve, 500));
-  }
+  // onCupPick is handled by the abstraction
 
   function onRest() { }
 
@@ -466,43 +547,15 @@ rgs.authenticate().catch(console.error);
     balanceText.text = `Balance: $${balance}`;
   }
 
-  async function playApiCall(): Promise<{
-    result: "win" | "loss";
-    balance: { amount: number };
-    round: { payoutMultiplier?: number };
-  }> {
-    const playResp = await rgs.getBookResponse();
-    if (
-      playResp &&
-      playResp.balance &&
-      typeof playResp.balance.amount === "number"
-    ) {
-      balance = playResp.balance.amount / 1000000;
-    }
-    return {
-      result:
-        playResp.round &&
-          playResp.round.payoutMultiplier &&
-          playResp.round.payoutMultiplier > 0
-          ? "win"
-          : "loss",
-      balance: playResp.balance,
-      round: playResp.round,
-    };
-  }
-
-  async function endRoundApiCall(): Promise<{ balance: { amount: number } }> {
-    await rgs.endRound();
-    return rgs.endRoundResponse || { balance: { amount: balance * 1000000 } };
-  }
-
   async function handleAutomatedRound() {
     await handleGameRound({
-      playApiCall,
-      endRoundApiCall,
-      onCupPick,
+      ForegroundAnimationGroup,
+      diamondSprite,
+      liftCup,
+      lowerCup,
       onRest,
       onBalanceUpdate,
+      balanceText,
     });
   }
 

@@ -1,4 +1,3 @@
-
 import { Sprite, Container } from "pixi.js";
 // AnimationLogic.ts
 // Handles the animation sequence for the game round
@@ -23,7 +22,6 @@ export class AnimationLogic {
     }
 }
 
-
 // Holistic animation sequence for the three-cup game
 // Usage: AnimationLogic.createCupGameSequence(cupSprites, prizeSprite, diamondSprite, onCupsClickable)
 /**
@@ -39,17 +37,18 @@ export function createCupGameSequence(
     prizeSprite: Sprite,
     diamondSprite: Sprite,
     group: Container,
-    onCupsClickable?: () => void
+    onCupsClickable?: () => void,
 ) {
     const anim = new AnimationLogic();
     // Helper: Animate cup lift/reveal
     function liftCup(cup: Sprite, liftHeight = 80, duration = 220) {
-        return new Promise<void>(resolve => {
+        return new Promise<void>((resolve) => {
             const startY = cup.y;
             let t = 0;
             function animate() {
                 t += 16;
-                cup.y = startY - liftHeight * Math.sin(Math.PI * Math.min(t / duration, 1));
+                cup.y =
+                    startY - liftHeight * Math.sin(Math.PI * Math.min(t / duration, 1));
                 cup.zIndex = 10; // bring to front
                 if (t < duration) {
                     requestAnimationFrame(animate);
@@ -62,12 +61,13 @@ export function createCupGameSequence(
     }
     // Helper: Lower cup
     function lowerCup(cup: Sprite, liftHeight = 80, duration = 220) {
-        return new Promise<void>(resolve => {
+        return new Promise<void>((resolve) => {
             const startY = cup.y;
             let t = 0;
             function animate() {
                 t += 16;
-                cup.y = startY + liftHeight * Math.sin(Math.PI * Math.min(t / duration, 1));
+                cup.y =
+                    startY + liftHeight * Math.sin(Math.PI * Math.min(t / duration, 1));
                 cup.zIndex = 1; // restore z
                 if (t < duration) {
                     requestAnimationFrame(animate);
@@ -80,16 +80,23 @@ export function createCupGameSequence(
     }
     // Helper: Shuffle cups with z-order
     function shuffleCups(times = 3, duration = 220) {
-        return new Promise<void>(async resolve => {
-            for (let i = 0; i < times; i++) {
+        return new Promise<void>((resolve) => {
+            let i = 0;
+            const doShuffle = () => {
+                if (i >= times) {
+                    resolve();
+                    return;
+                }
                 // Pick two random cups
                 const idxA = Math.floor(Math.random() * cupSprites.length);
                 let idxB = Math.floor(Math.random() * cupSprites.length);
-                while (idxB === idxA) idxB = Math.floor(Math.random() * cupSprites.length);
+                while (idxB === idxA)
+                    idxB = Math.floor(Math.random() * cupSprites.length);
                 const cupA = cupSprites[idxA];
                 const cupB = cupSprites[idxB];
                 // Animate swap
-                const xA = cupA.x, xB = cupB.x;
+                const xA = cupA.x,
+                    xB = cupB.x;
                 let t = 0;
                 function animate() {
                     t += 16;
@@ -110,16 +117,20 @@ export function createCupGameSequence(
                         cupA.x = xB;
                         cupB.x = xA;
                         // Swap in array for logical order
-                        [cupSprites[idxA], cupSprites[idxB]] = [cupSprites[idxB], cupSprites[idxA]];
+                        [cupSprites[idxA], cupSprites[idxB]] = [
+                            cupSprites[idxB],
+                            cupSprites[idxA],
+                        ];
                         // Swap in container for visual order
                         group.setChildIndex(cupA, group.getChildIndex(cupB));
                         group.setChildIndex(cupB, group.getChildIndex(cupA));
-                        resolve();
+                        i++;
+                        setTimeout(doShuffle, 0);
                     }
                 }
-                await new Promise<void>(r => { animate(); setTimeout(r, duration); });
-            }
-            resolve();
+                animate();
+            };
+            doShuffle();
         });
     }
     // Step 1: Pick random cup, lift, reveal prize
@@ -132,7 +143,7 @@ export function createCupGameSequence(
         prizeSprite.y = cup.y - cup.height * cup.scale.y;
         prizeSprite.zIndex = 5;
         group.setChildIndex(prizeSprite, group.getChildIndex(cup));
-        await new Promise(r => setTimeout(r, 500));
+        await new Promise((r) => setTimeout(r, 500));
         await lowerCup(cup);
         prizeSprite.visible = false;
     });
@@ -150,7 +161,7 @@ export function createCupGameSequence(
         diamondSprite.y = cup.y - cup.height * cup.scale.y;
         diamondSprite.zIndex = 5;
         group.setChildIndex(diamondSprite, group.getChildIndex(cup));
-        await new Promise(r => setTimeout(r, 500));
+        await new Promise((r) => setTimeout(r, 500));
         await lowerCup(cup);
         diamondSprite.visible = false;
     });
