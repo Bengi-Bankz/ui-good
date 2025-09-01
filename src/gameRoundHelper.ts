@@ -30,11 +30,7 @@ export interface GameRoundOptions {
     liftHeight?: number,
     duration?: number,
   ) => Promise<void>;
-  lowerCup: (
-    cup: Sprite,
-    liftHeight?: number,
-    duration?: number,
-  ) => Promise<void>;
+  lowerCup: (cup: Sprite, duration?: number) => Promise<void>;
   onRest: () => void;
   onBalanceUpdate: (endRoundResponse: EndRoundResponse) => void;
   balanceText: Text;

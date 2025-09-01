@@ -477,15 +477,22 @@ authenticate().catch(console.error);
 
   // onCupPick is now handled by the abstraction via handleGameRound
 
+  // Track original positions for proper lowering
+  const cupOriginalPositions = new Map<Sprite, number>();
+
   // Animation helpers (should match AnimationLogic)
   function liftCup(cup: Sprite, liftHeight = 80, duration = 220) {
     return new Promise<void>((resolve) => {
-      const startY = cup.y;
+      // Store original position if not already stored
+      if (!cupOriginalPositions.has(cup)) {
+        cupOriginalPositions.set(cup, cup.y);
+      }
+      const originalY = cupOriginalPositions.get(cup)!;
       let t = 0;
       function animate() {
         t += 16;
-        cup.y =
-          startY - liftHeight * Math.sin(Math.PI * Math.min(t / duration, 1));
+        const progress = Math.min(t / duration, 1);
+        cup.y = originalY - liftHeight * Math.sin(Math.PI * progress);
         cup.zIndex = 10;
         if (t < duration) {
           requestAnimationFrame(animate);
@@ -496,18 +503,24 @@ authenticate().catch(console.error);
       animate();
     });
   }
-  function lowerCup(cup: Sprite, liftHeight = 80, duration = 220) {
+  function lowerCup(cup: Sprite, duration = 220) {
     return new Promise<void>((resolve) => {
-      const startY = cup.y;
+      const originalY = cupOriginalPositions.get(cup) || cup.y;
+      const currentY = cup.y;
       let t = 0;
       function animate() {
         t += 16;
+        const progress = Math.min(t / duration, 1);
+        // Smoothly interpolate from current position back to original
         cup.y =
-          startY + liftHeight * Math.sin(Math.PI * Math.min(t / duration, 1));
+          currentY +
+          ((originalY - currentY) * (1 - Math.cos(Math.PI * progress))) / 2;
         cup.zIndex = 1;
         if (t < duration) {
           requestAnimationFrame(animate);
         } else {
+          // Ensure cup is exactly at original position
+          cup.y = originalY;
           resolve();
         }
       }
