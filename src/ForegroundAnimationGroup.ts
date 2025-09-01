@@ -43,8 +43,8 @@ export async function createForegroundAnimationGroup(
         cupSprites.forEach((cup) => cup.scale.set(scale));
 
         // X positions: left cup at 12%, middle cup & prize at center, right cup at 88%
-        const leftX = app.screen.width * 0.12;
-        const rightX = app.screen.width * 0.88;
+        const leftX = app.screen.width * 0.30;
+        const rightX = app.screen.width * 0.70;
         const centerX = (leftX + rightX) / 2;
         const y = app.screen.height * 0.65;
 
