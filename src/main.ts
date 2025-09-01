@@ -10,7 +10,7 @@ import {
   TextStyle,
 } from "pixi.js";
 import { getAdjustedScale } from "./uiScaleHelper";
-import { createBGAnimationGroup } from "./BGAnimationGroup";
+import { createBGAnimationGroup, LayoutContainer } from "./BGAnimationGroup";
 import * as PIXI_SOUND from "pixi-sound";
 
 // --- Global sound effect helper for all clickable elements ---
@@ -87,7 +87,7 @@ rgs.authenticate().catch(console.error);
   window.dispatchEvent(new Event("resize"));
 
   // --- Background Animation Group
-  const BGAnimationGroup = await createBGAnimationGroup(app);
+  const BGAnimationGroup: LayoutContainer = await createBGAnimationGroup(app);
   app.stage.addChild(BGAnimationGroup);
 
   // --- Loader Bar Animation ---
@@ -241,6 +241,8 @@ rgs.authenticate().catch(console.error);
   const playButton: Container = new Container();
   function buildPlayButton(onClick: () => void) {
     playButton.removeChildren();
+    playButton.removeAllListeners("pointertap"); // Fix: Prevent multiple event handlers
+
     const scale = getAdjustedScale(app.screen.width, app.screen.height);
     const bgWidth = 160 * scale;
     const bgHeight = 48 * scale;
@@ -288,7 +290,6 @@ rgs.authenticate().catch(console.error);
   }
   buildPlayButton(handleAutomatedRound);
   app.stage.addChild(playButton);
-
   // --- Balance and Sound Toggle ---
   let balance = 1000;
   const style = new TextStyle({ fontSize: 20, fill: "#fff" });
