@@ -550,8 +550,8 @@ import { Container, Text, TextStyle } from "pixi.js";
     return {
       result:
         playResp.round &&
-        playResp.round.payoutMultiplier &&
-        playResp.round.payoutMultiplier > 0
+          playResp.round.payoutMultiplier &&
+          playResp.round.payoutMultiplier > 0
           ? "win"
           : "loss",
       balance: playResp.balance,
