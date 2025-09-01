@@ -85,7 +85,7 @@ import { Container, Text, TextStyle } from "pixi.js";
   // --- Loader Bar Animation ---
   const loaderFrames: Sprite[] = [];
   for (let i = 1; i <= 6; i++) {
-    const url = new URL(`./assets/${i}.png`, import.meta.url).href;
+    const url = new URL(`./assets/loader (${i}).png`, import.meta.url).href;
     const tex = await Assets.load(url);
     const frame = new Sprite(tex);
     frame.anchor.set(0.5);
