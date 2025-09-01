@@ -1,5 +1,5 @@
 import { Container, Sprite, Assets, Texture, Application } from "pixi.js";
-import { isMobile, getUIScale } from "./uiScaleHelper";
+import { isMobile, getUIScale } from "../ui/uiScaleHelper";
 
 // Extend Container to support a layout method for TypeScript safety
 export interface LayoutContainer extends Container {
@@ -15,7 +15,7 @@ export async function createBGAnimationGroup(
 
   // --- BG.png as full background ---
   const bgTexture = await Assets.load(
-    new URL("./assets/bg.png", import.meta.url).href,
+    new URL("../assets/bg.png", import.meta.url).href,
   );
   const bgSprite = new Sprite(bgTexture);
   bgSprite.anchor.set(0.5);
@@ -23,7 +23,7 @@ export async function createBGAnimationGroup(
 
   // --- name.png at top center (20% from top) ---
   const nameTexture = await Assets.load(
-    new URL("./assets/name.png", import.meta.url).href,
+    new URL("../assets/name.png", import.meta.url).href,
   );
   const nameSprite = new Sprite(nameTexture);
   nameSprite.anchor.set(0.5);
@@ -33,7 +33,7 @@ export async function createBGAnimationGroup(
   const diamondFrames: Texture[] = [];
   for (let i = 1; i <= 10; i++) {
     const tex = await Assets.load(
-      new URL(`./assets/diamond (${i}).png`, import.meta.url).href,
+      new URL(`../assets/diamond (${i}).png`, import.meta.url).href,
     );
     diamondFrames.push(tex);
   }

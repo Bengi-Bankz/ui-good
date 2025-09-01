@@ -1,3 +1,11 @@
+// Animation system for cup game sequences
+// Handles timing, easing, and coordination of visual effects
+//
+// TODO: Add easing functions for smoother animations
+// TODO: Implement animation cancellation and cleanup
+// TODO: Add support for parallel animation tracks
+// TODO: Create animation presets for common effects
+
 import { Sprite, Container } from "pixi.js";
 // AnimationLogic.ts
 // Handles the animation sequence for the game round

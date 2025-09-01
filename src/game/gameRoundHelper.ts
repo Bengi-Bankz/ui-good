@@ -1,21 +1,17 @@
 // gameRoundHelper.ts
 // Helper to automate end round logic for the cup game
-// If API play response is a win, call endRound after cup pick. If loss, do not call endRound.
+// Handles game round flow including RGS integration and cup selection logic
 //
 // Win/loss is determined by the payoutMultiplier field in the API response:
 //   - Win:   round.payoutMultiplier > 0 (e.g., 0.6)
 //   - Loss:  round.payoutMultiplier is missing, zero, or falsy
 //
-// If you call endRound when the player has lost, the API will respond with:
-//   {
-//     "error": "ERR_VAL",
-//     "message": "player has active bet"
-//   }
-
-// Use PlayResponse and EndRoundResponse from rgs-auth.ts
+// TODO: Refactor to use more generic game round abstraction
+// TODO: Add support for different bet amounts
+// TODO: Improve error handling and user feedback
 
 import type { Container, Sprite, Text } from "pixi.js";
-import type { PlayResponse, EndRoundResponse } from "./rgs-auth";
+import type { PlayResponse, EndRoundResponse } from "../rgs";
 
 export interface GameRoundOptions {
   ForegroundAnimationGroup: Container & {
@@ -55,28 +51,23 @@ export async function handleGameRound(
     forceEndRound = false,
   } = opts;
 
-  // Import API functions dynamically to avoid circular deps
-  const { getBookResponse, endRound, endRoundResponse } = await import(
-    "./rgs-auth"
-  );
+  // Import RGS functions from new centralized module
+  const {
+    executeGameRound,
+    finalizeRound,
+    getLastEndRoundResponse,
+    isActiveBetError,
+  } = await import("../rgs");
 
   let playResponse: PlayResponse | null = null;
   let activeBetError = false;
+
   if (!skipAnimation) {
     try {
-      playResponse = await getBookResponse();
+      playResponse = await executeGameRound(1); // TODO: Make bet amount configurable
     } catch (err) {
-      // If error is active bet, set flag
-      type RgsError = { error: string; message: string };
-      const e = err as RgsError;
-      if (
-        typeof err === "object" &&
-        err !== null &&
-        "error" in err &&
-        e.error === "ERR_VAL" &&
-        typeof e.message === "string" &&
-        /active bet/i.test(e.message)
-      ) {
+      // Check if error is active bet error using centralized utility
+      if (isActiveBetError(err)) {
         activeBetError = true;
       } else {
         throw err;
@@ -102,9 +93,11 @@ export async function handleGameRound(
           c.cursor = "default";
         });
         if (activeBetError || forceEndRound) {
-          // Just call endRound after pick, no animation
-          await endRound();
-          onBalanceUpdate(endRoundResponse || { balance: { amount: 0 } });
+          // Just call finalizeRound after pick, no animation
+          await finalizeRound();
+          onBalanceUpdate(
+            getLastEndRoundResponse() || { balance: { amount: 0 } },
+          );
         } else {
           // Animate chosen cup lift
           await liftCup(cup);
@@ -126,8 +119,10 @@ export async function handleGameRound(
             await lowerCup(cup);
             diamondSprite.visible = false;
             // End round and update balance
-            await endRound();
-            onBalanceUpdate(endRoundResponse || { balance: { amount: 0 } });
+            await finalizeRound();
+            onBalanceUpdate(
+              getLastEndRoundResponse() || { balance: { amount: 0 } },
+            );
           } else {
             // LOSS: reveal empty cup, then reveal diamond under random other cup
             await new Promise((r) => setTimeout(r, 600));
@@ -148,6 +143,7 @@ export async function handleGameRound(
             await new Promise((r) => setTimeout(r, 800));
             await lowerCup(otherCup);
             diamondSprite.visible = false;
+            // Note: For losses, we don't call finalizeRound to avoid "active bet" error
           }
         }
         // Reset state for next round

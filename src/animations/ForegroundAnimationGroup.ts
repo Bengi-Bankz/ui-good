@@ -1,5 +1,5 @@
 import { Container, Sprite, Assets, Application } from "pixi.js";
-import { isMobile, getUIScale } from "./uiScaleHelper";
+import { isMobile, getUIScale } from "../ui/uiScaleHelper";
 
 export interface LayoutContainer extends Container {
   layout?: () => void;
@@ -17,7 +17,7 @@ export async function createForegroundAnimationGroup(app: Application): Promise<
 
   // --- Prize.png ---
   const prizeTexture = await Assets.load(
-    new URL("./assets/prize.png", import.meta.url).href,
+    new URL("../assets/prize.png", import.meta.url).href,
   );
   const prizeSprite = new Sprite(prizeTexture);
   prizeSprite.anchor.set(0.5, 1);
@@ -27,7 +27,7 @@ export async function createForegroundAnimationGroup(app: Application): Promise<
   const cupSprites: Sprite[] = [];
   for (let i = 0; i < 3; i++) {
     const cupTexture = await Assets.load(
-      new URL("./assets/redcup.png", import.meta.url).href,
+      new URL("../assets/redcup.png", import.meta.url).href,
     );
     const cupSprite = new Sprite(cupTexture);
     cupSprite.anchor.set(0.5, 1);
