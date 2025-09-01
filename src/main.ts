@@ -64,13 +64,7 @@ import { Container, Text, TextStyle } from "pixi.js";
   canvas.style.height = "100vh";
   window.dispatchEvent(new Event("resize"));
 
-  // Load the engine texture using strict CDN-compatible pattern
-  const engineUrl = new URL("./assets/engine.png", import.meta.url).href;
-  const texture = await Assets.load(engineUrl);
-  const engine = new Sprite(texture);
-  engine.anchor.set(0.5);
-  engine.position.set(app.screen.width / 2, app.screen.height / 2);
-  app.stage.addChild(engine);
+  // Removed engine.png sprite from canvas
 
   // --- Loader Bar Animation ---
   const loaderFrames: Sprite[] = [];
@@ -564,7 +558,6 @@ import { Container, Text, TextStyle } from "pixi.js";
 
   // Animate engine and loader
   app.ticker.add((time) => {
-    engine.rotation += 0.1 * time.deltaTime;
     // Loader animation
     if (loaderActive) {
       loaderElapsed += time.deltaMS;
