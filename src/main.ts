@@ -137,9 +137,16 @@ authenticate().catch(console.error);
   function buildBetInput() {
     betInput.removeChildren();
     const scale = getAdjustedScale(app.screen.width, app.screen.height);
+
+    // Increase size for very small screens
+    let sizeMultiplier = 1;
+    if (app.screen.width <= 400 && app.screen.height <= 225) {
+      sizeMultiplier = 1.3; // Make 30% larger on very small screens
+    }
+
     const bg = new Graphics();
-    const bgWidth = 300 * scale;
-    const bgHeight = 60 * scale;
+    const bgWidth = 300 * scale * sizeMultiplier;
+    const bgHeight = 60 * scale * sizeMultiplier;
     bg.beginFill(0x1a2233, 0.98);
     bg.drawRoundedRect(0, 0, bgWidth, bgHeight, 22 * scale);
     bg.endFill();
@@ -152,14 +159,20 @@ authenticate().catch(console.error);
     const minusBg = new Graphics();
     minusBg
       .beginFill(0x28324a, 1)
-      .drawRoundedRect(0, 0, 38 * scale, 38 * scale, 12 * scale)
+      .drawRoundedRect(
+        0,
+        0,
+        38 * scale * sizeMultiplier,
+        38 * scale * sizeMultiplier,
+        12 * scale,
+      )
       .endFill();
     minusBg.beginFill(0x000000, 0.12);
     minusBg.drawRoundedRect(
       3 * scale,
       3 * scale,
-      38 * scale,
-      38 * scale,
+      38 * scale * sizeMultiplier,
+      38 * scale * sizeMultiplier,
       12 * scale,
     );
     minusBg.endFill();
@@ -167,13 +180,16 @@ authenticate().catch(console.error);
     const minusTxt = new Text({
       text: "-",
       style: new TextStyle({
-        fontSize: 26 * scale,
+        fontSize: 26 * scale * sizeMultiplier,
         fill: "#fff",
         fontWeight: "bold",
       }),
     });
     minusTxt.anchor.set(0.5);
-    minusTxt.position.set(19 * scale, 19 * scale);
+    minusTxt.position.set(
+      19 * scale * sizeMultiplier,
+      19 * scale * sizeMultiplier,
+    );
     minusBtn.addChild(minusTxt);
     addSoundToClickable(minusBtn);
     minusBtn.on("pointertap", () => {
@@ -187,11 +203,11 @@ authenticate().catch(console.error);
     betText = new Text({
       text: "",
       style: new TextStyle({
-        fontSize: 30 * scale,
+        fontSize: 30 * scale * sizeMultiplier,
         fill: "#b0e0ff",
         fontWeight: "bold",
         dropShadow: true,
-        letterSpacing: 1.5 * scale,
+        letterSpacing: 1.5 * scale * sizeMultiplier,
       }),
     });
     updateBetText();
@@ -201,14 +217,20 @@ authenticate().catch(console.error);
     const plusBg = new Graphics();
     plusBg
       .beginFill(0x28324a, 1)
-      .drawRoundedRect(0, 0, 38 * scale, 38 * scale, 12 * scale)
+      .drawRoundedRect(
+        0,
+        0,
+        38 * scale * sizeMultiplier,
+        38 * scale * sizeMultiplier,
+        12 * scale,
+      )
       .endFill();
     plusBg.beginFill(0x000000, 0.12);
     plusBg.drawRoundedRect(
       3 * scale,
       3 * scale,
-      38 * scale,
-      38 * scale,
+      38 * scale * sizeMultiplier,
+      38 * scale * sizeMultiplier,
       12 * scale,
     );
     plusBg.endFill();
@@ -216,13 +238,16 @@ authenticate().catch(console.error);
     const plusTxt = new Text({
       text: "+",
       style: new TextStyle({
-        fontSize: 26 * scale,
+        fontSize: 26 * scale * sizeMultiplier,
         fill: "#fff",
         fontWeight: "bold",
       }),
     });
     plusTxt.anchor.set(0.5);
-    plusTxt.position.set(19 * scale, 19 * scale);
+    plusTxt.position.set(
+      19 * scale * sizeMultiplier,
+      19 * scale * sizeMultiplier,
+    );
     plusBtn.addChild(plusTxt);
     addSoundToClickable(plusBtn);
     plusBtn.on("pointertap", () => {
@@ -233,9 +258,15 @@ authenticate().catch(console.error);
       }
     });
 
-    minusBtn.position.set(50 * scale, 11 * scale);
+    minusBtn.position.set(
+      50 * scale * sizeMultiplier,
+      11 * scale * sizeMultiplier,
+    );
     betText.position.set(bgWidth / 2, bgHeight / 2);
-    plusBtn.position.set(bgWidth - 50 * scale - 38 * scale, 11 * scale);
+    plusBtn.position.set(
+      bgWidth - 50 * scale * sizeMultiplier - 38 * scale * sizeMultiplier,
+      11 * scale * sizeMultiplier,
+    );
     betInput.addChild(minusBtn);
     betInput.addChild(betText);
     betInput.addChild(plusBtn);
@@ -255,8 +286,15 @@ authenticate().catch(console.error);
     playStartButton.removeChildren();
     playStartButton.removeAllListeners("pointertap");
     const scale = getAdjustedScale(app.screen.width, app.screen.height);
-    const bgWidth = 352 * scale; // 160*2 + 32 spacing
-    const bgHeight = 48 * scale;
+
+    // Increase size for very small screens
+    let sizeMultiplier = 1;
+    if (app.screen.width <= 400 && app.screen.height <= 225) {
+      sizeMultiplier = 1.3; // Make 30% larger on very small screens
+    }
+
+    const bgWidth = 352 * scale * sizeMultiplier; // 160*2 + 32 spacing
+    const bgHeight = 48 * scale * sizeMultiplier;
     playStartButtonBg = new Graphics();
     playStartButtonBg.beginFill(0x000000, 0.18);
     playStartButtonBg.drawRoundedRect(
@@ -283,11 +321,11 @@ authenticate().catch(console.error);
     playStartButtonTxt = new Text({
       text: buttonText,
       style: new TextStyle({
-        fontSize: 22 * scale,
+        fontSize: 22 * scale * sizeMultiplier,
         fill: buttonFill,
         fontWeight: "bold",
         dropShadow: true,
-        letterSpacing: 1.2 * scale,
+        letterSpacing: 1.2 * scale * sizeMultiplier,
       }),
     });
     playStartButtonTxt.anchor.set(0.5);
@@ -298,13 +336,18 @@ authenticate().catch(console.error);
     if (!playStartButtonDisabled) {
       playStartButton.on("pointertap", async () => {
         setPlayStartButtonDisabled(true);
+
+        // Immediately subtract bet amount from balance
+        balance -= betValue;
+        balanceText.text = `Balance: $${balance}`;
+
         // Try to get play response, catch active bet error
         let activeBetError = false;
         // ...existing code...
         try {
           // Try to get play response (simulate what handleGameRound does)
           const { getBookResponse } = await import("./rgs-auth");
-          await getBookResponse();
+          await getBookResponse(betValue);
         } catch (err) {
           type RgsError = { error: string; message: string };
           const e = err as RgsError;
@@ -318,6 +361,9 @@ authenticate().catch(console.error);
           ) {
             activeBetError = true;
           } else {
+            // If there's an error, restore the balance
+            balance += betValue;
+            balanceText.text = `Balance: $${balance}`;
             throw err;
           }
         }
@@ -339,6 +385,7 @@ authenticate().catch(console.error);
             balanceText,
             skipAnimation: true,
             forceEndRound: true,
+            betAmount: betValue,
           });
         } else {
           // Normal flow: animation, then choose a cup
@@ -357,6 +404,7 @@ authenticate().catch(console.error);
             },
             onBalanceUpdate,
             balanceText,
+            betAmount: betValue,
           });
         }
       });
@@ -510,6 +558,12 @@ authenticate().catch(console.error);
   function layoutUI() {
     const scale = getAdjustedScale(app.screen.width, app.screen.height);
 
+    // Size multiplier for very small screens
+    let sizeMultiplier = 1;
+    if (app.screen.width <= 400 && app.screen.height <= 225) {
+      sizeMultiplier = 1.3;
+    }
+
     // BG animation group
     if (typeof BGAnimationGroup.layout === "function")
       BGAnimationGroup.layout();
@@ -519,15 +573,15 @@ authenticate().catch(console.error);
       ForegroundAnimationGroup.layout();
 
     // Bet Input
-    const betInputBgWidth = 300 * scale;
-    const betInputBgHeight = 60 * scale;
+    const betInputBgWidth = 300 * scale * sizeMultiplier;
+    const betInputBgHeight = 60 * scale * sizeMultiplier;
     betInput.x = (app.screen.width - betInputBgWidth) / 2;
     betInput.y = app.screen.height - betInputBgHeight - 32 * scale;
     buildBetInput();
 
     // Play/Start Button
-    const buttonWidth = 352 * scale;
-    const buttonHeight = 48 * scale;
+    const buttonWidth = 352 * scale * sizeMultiplier;
+    const buttonHeight = 48 * scale * sizeMultiplier;
     playStartButton.x = (app.screen.width - buttonWidth) / 2;
     playStartButton.y = betInput.y - buttonHeight - 24 * scale;
     buildPlayStartButton();
@@ -578,6 +632,7 @@ authenticate().catch(console.error);
   function showInfoModal() {
     if (infoModal) return;
     infoModal = new Container();
+    infoModal.zIndex = 1000; // Ensure modal appears above all other elements
     const modalWidth = app.screen.width * 0.92;
     const modalHeight = app.screen.height * 0.7;
     const bg = new Graphics();

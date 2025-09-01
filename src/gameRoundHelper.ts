@@ -38,6 +38,7 @@ export interface GameRoundOptions {
   onRest: () => void;
   onBalanceUpdate: (endRoundResponse: EndRoundResponse) => void;
   balanceText: Text;
+  betAmount?: number; // Add bet amount parameter
 }
 
 export async function handleGameRound(
@@ -53,6 +54,7 @@ export async function handleGameRound(
     onBalanceUpdate,
     skipAnimation = false,
     forceEndRound = false,
+    betAmount = 1,
   } = opts;
 
   // Import API functions dynamically to avoid circular deps
@@ -64,7 +66,7 @@ export async function handleGameRound(
   let activeBetError = false;
   if (!skipAnimation) {
     try {
-      playResponse = await getBookResponse();
+      playResponse = await getBookResponse(betAmount);
     } catch (err) {
       // If error is active bet, set flag
       type RgsError = { error: string; message: string };
@@ -93,13 +95,38 @@ export async function handleGameRound(
       cup.cursor = "pointer";
       cup.interactive = true;
       cup.removeAllListeners();
+
+      // Add hover effects like other clickable elements
+      cup.on("pointerover", () => {
+        if (sessionStorage.getItem("soundEnabled") === "1") {
+          // Import PIXI_SOUND dynamically to play hover sound
+          import("pixi-sound").then((PIXI_SOUND) => {
+            PIXI_SOUND.default.play("hover");
+          });
+        }
+        cup.scale.set(cup.scale.x * 1.08, cup.scale.y * 1.08);
+      });
+
+      cup.on("pointerout", () => {
+        // Reset scale to original
+        const scale = cup.scale.x / 1.08;
+        cup.scale.set(scale, scale);
+      });
+
       cup.on("pointertap", async () => {
         if (chosenIdx !== null) return; // Only allow one pick
         chosenIdx = idx;
+        // Play press sound
+        if (sessionStorage.getItem("soundEnabled") === "1") {
+          import("pixi-sound").then((PIXI_SOUND) => {
+            PIXI_SOUND.default.play("press");
+          });
+        }
         // Disable all cups
         cupSprites.forEach((c: Sprite) => {
           c.interactive = false;
           c.cursor = "default";
+          c.removeAllListeners(); // Remove hover effects when disabled
         });
         if (activeBetError || forceEndRound) {
           // Just call endRound after pick, no animation
