@@ -106,7 +106,12 @@ import { Container, Text, TextStyle } from "pixi.js";
   }, 2000);
 
   // --- Replace Play Button with custom red button styled like bet input ---
-  function createRedButton(label: string, x: number, y: number, onClick: () => void) {
+  function createRedButton(
+    label: string,
+    x: number,
+    y: number,
+    onClick: () => void,
+  ) {
     const btn = new Container();
     // Red background with rounded corners and shadow
     const bgWidth = 160;
@@ -197,10 +202,7 @@ import { Container, Text, TextStyle } from "pixi.js";
     // - button (modern look)
     const minusBtn = new Container();
     const minusBg = new Graphics();
-    minusBg
-      .beginFill(0x28324a, 1)
-      .drawRoundedRect(0, 0, 38, 38, 12)
-      .endFill();
+    minusBg.beginFill(0x28324a, 1).drawRoundedRect(0, 0, 38, 38, 12).endFill();
     // Button shadow
     minusBg.beginFill(0x000000, 0.12);
     minusBg.drawRoundedRect(3, 3, 38, 38, 12);
@@ -239,10 +241,7 @@ import { Container, Text, TextStyle } from "pixi.js";
     // + button (modern look)
     const plusBtn = new Container();
     const plusBg = new Graphics();
-    plusBg
-      .beginFill(0x28324a, 1)
-      .drawRoundedRect(0, 0, 38, 38, 12)
-      .endFill();
+    plusBg.beginFill(0x28324a, 1).drawRoundedRect(0, 0, 38, 38, 12).endFill();
     plusBg.beginFill(0x000000, 0.12);
     plusBg.drawRoundedRect(3, 3, 38, 38, 12);
     plusBg.endFill();
@@ -274,7 +273,7 @@ import { Container, Text, TextStyle } from "pixi.js";
     // Position bet input centered above Play button and always center on resize
     function positionBetInput() {
       betInput.x = (app.screen.width - bgWidth) / 2;
-      betInput.y = app.screen.height - bgHeight - 32;;
+      betInput.y = app.screen.height - bgHeight - 32;
     }
     positionBetInput();
     app.renderer.on("resize", positionBetInput);
@@ -308,7 +307,7 @@ import { Container, Text, TextStyle } from "pixi.js";
   drawToggleBg();
   soundToggle.addChild(toggleBg);
   // Icon
-  let iconText = new Text({
+  const iconText = new Text({
     text: soundEnabledState ? "🔊" : "🔇",
     style: new TextStyle({ fontSize: 20, fill: "#fff" }),
   });
@@ -551,8 +550,8 @@ import { Container, Text, TextStyle } from "pixi.js";
     return {
       result:
         playResp.round &&
-          playResp.round.payoutMultiplier &&
-          playResp.round.payoutMultiplier > 0
+        playResp.round.payoutMultiplier &&
+        playResp.round.payoutMultiplier > 0
           ? "win"
           : "loss",
       balance: playResp.balance,
@@ -589,7 +588,11 @@ import { Container, Text, TextStyle } from "pixi.js";
     if (playButton) {
       playButton.x = app.screen.width / 2 - buttonWidth / 2;
       playButton.y =
-        app.screen.height - betInputBgHeight - betInputMarginBottom - buttonHeight - playButtonMargin;
+        app.screen.height -
+        betInputBgHeight -
+        betInputMarginBottom -
+        buttonHeight -
+        playButtonMargin;
     }
   }
   playButton = createButton(
