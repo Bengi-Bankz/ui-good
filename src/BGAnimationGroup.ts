@@ -52,10 +52,13 @@ export async function createBGAnimationGroup(
     bgSprite.y = app.screen.height / 2;
 
     let scale = getUIScale(app.screen.width);
+    // Make name.png smaller on mobile to prevent overlap with cups
+    let nameScale = scale;
     if (isMobile(app.screen.width) && app.screen.height > app.screen.width) {
       scale *= 1.2;
+      nameScale *= 0.6; // Make name.png significantly smaller on mobile portrait
     }
-    nameSprite.scale.set(scale);
+    nameSprite.scale.set(nameScale);
     leftDiamond.scale.set(scale);
     rightDiamond.scale.set(scale);
 

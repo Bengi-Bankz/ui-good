@@ -40,7 +40,7 @@ export async function createForegroundAnimationGroup(app: Application): Promise<
     // Get scale
     let scale = getUIScale(app.screen.width);
     if (isMobile(app.screen.width) && app.screen.height > app.screen.width) {
-      scale *= 1.2;
+      scale *= 1.4; // Increase scale more on mobile portrait for better visibility
     }
     prizeSprite.scale.set(scale);
     cupSprites.forEach((cup) => cup.scale.set(scale));
@@ -49,7 +49,12 @@ export async function createForegroundAnimationGroup(app: Application): Promise<
     const leftX = app.screen.width * 0.3;
     const rightX = app.screen.width * 0.7;
     const centerX = (leftX + rightX) / 2;
-    const y = app.screen.height * 0.65;
+
+    // Move cups up on mobile portrait for better visibility
+    let y = app.screen.height * 0.65;
+    if (isMobile(app.screen.width) && app.screen.height > app.screen.width) {
+      y = app.screen.height * 0.55; // Move cups up on mobile portrait
+    }
 
     // Left cup
     cupSprites[0].x = leftX;

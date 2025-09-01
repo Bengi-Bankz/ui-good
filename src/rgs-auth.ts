@@ -74,15 +74,15 @@ async function endRound() {
   }
 }
 
-async function getBookResponse(): Promise<PlayResponse> {
+async function getBookResponse(betAmount: number = 1): Promise<PlayResponse> {
   if (gamestate === "rest") {
-    balance -= 1;
+    balance -= betAmount;
   }
   const resp = await getRGSResponse<PlayResponse>("/wallet/play", {
     mode: getParam("mode") ?? "BASE",
     currency: getParam("currency"),
     sessionID: getParam("sessionID"),
-    amount: 1 * API_MULTIPLIER,
+    amount: betAmount * API_MULTIPLIER,
   });
   response = resp;
   endRoundResponse = null;
