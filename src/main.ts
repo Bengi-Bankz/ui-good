@@ -1,3 +1,19 @@
+// --- Global sound effect helper for all clickable elements ---
+function addSoundToClickable(obj: Container | Sprite) {
+  obj.eventMode = "static";
+  obj.cursor = "pointer";
+  obj.interactive = true;
+  obj.on("pointerover", () => {
+    if (sessionStorage.getItem("soundEnabled") === "1") {
+      PIXI_SOUND.default.play("hover");
+    }
+  });
+  obj.on("pointertap", () => {
+    if (sessionStorage.getItem("soundEnabled") === "1") {
+      PIXI_SOUND.default.play("press");
+    }
+  });
+}
 import * as rgs from "./rgs-auth";
 import { handleGameRound } from "./gameRoundHelper";
 import { Application, Assets, Sprite, Graphics } from "pixi.js";
@@ -120,10 +136,7 @@ import { Container, Text, TextStyle } from "pixi.js";
     txt.position.set(bgWidth / 2, bgHeight / 2);
     btn.addChild(txt);
     btn.position.set(x, y);
-    btn.eventMode = "static";
-    btn.cursor = "pointer";
-    // Hover and press effects
-    btn.interactive = true;
+    // Only handle visual hover/press here, sound is global
     btn.on("pointerover", () => {
       bg.tint = 0xff5252;
       btn.scale.set(1.08);
@@ -142,6 +155,7 @@ import { Container, Text, TextStyle } from "pixi.js";
       btn.scale.set(1);
     });
     btn.on("pointertap", onClick);
+    addSoundToClickable(btn);
     app.stage.addChild(btn);
     return btn;
   }
@@ -199,9 +213,7 @@ import { Container, Text, TextStyle } from "pixi.js";
     minusTxt.anchor.set(0.5);
     minusTxt.position.set(19, 19);
     minusBtn.addChild(minusTxt);
-    minusBtn.eventMode = "static";
-    minusBtn.cursor = "pointer";
-    minusBtn.interactive = true;
+    addSoundToClickable(minusBtn);
     minusBtn.on("pointertap", () => {
       if (betIndex > 0) {
         betIndex--;
@@ -242,9 +254,7 @@ import { Container, Text, TextStyle } from "pixi.js";
     plusTxt.anchor.set(0.5);
     plusTxt.position.set(19, 19);
     plusBtn.addChild(plusTxt);
-    plusBtn.eventMode = "static";
-    plusBtn.cursor = "pointer";
-    plusBtn.interactive = true;
+    addSoundToClickable(plusBtn);
     plusBtn.on("pointertap", () => {
       if (betIndex < betSteps.length - 1) {
         betIndex++;
@@ -280,7 +290,47 @@ import { Container, Text, TextStyle } from "pixi.js";
   const balanceText = new Text({ text: `Balance: $${balance}`, style });
   balanceText.anchor.set(0, 0);
   balanceText.position.set(20, 20);
+
   app.stage.addChild(balanceText);
+
+  // --- Sound Toggle Button under Balance ---
+  let soundEnabledState = sessionStorage.getItem("soundEnabled") === "1";
+  const soundToggle = new Container();
+  const toggleBg = new Graphics();
+  const toggleWidth = 36;
+  const toggleHeight = 36;
+  function drawToggleBg() {
+    toggleBg.clear();
+    toggleBg.beginFill(soundEnabledState ? 0x4caf50 : 0xb71c1c, 0.95); // green if on, red if off
+    toggleBg.drawRoundedRect(0, 0, toggleWidth, toggleHeight, 10);
+    toggleBg.endFill();
+  }
+  drawToggleBg();
+  soundToggle.addChild(toggleBg);
+  // Icon
+  let iconText = new Text({
+    text: soundEnabledState ? "🔊" : "🔇",
+    style: new TextStyle({ fontSize: 20, fill: "#fff" }),
+  });
+  iconText.anchor.set(0.5);
+  iconText.position.set(toggleWidth / 2, toggleHeight / 2);
+  soundToggle.addChild(iconText);
+  // Make interactive
+  addSoundToClickable(soundToggle);
+  soundToggle.on("pointertap", () => {
+    soundEnabledState = !soundEnabledState;
+    sessionStorage.setItem("soundEnabled", soundEnabledState ? "1" : "0");
+    iconText.text = soundEnabledState ? "🔊" : "🔇";
+    drawToggleBg();
+  });
+  // Position under balance
+  function positionSoundToggle() {
+    soundToggle.x = 20;
+    soundToggle.y = balanceText.y + balanceText.height + 8;
+  }
+  positionSoundToggle();
+  app.stage.addChild(soundToggle);
+  app.renderer.on("resize", positionSoundToggle);
 
   // --- UI: Info and Speaker Icons Top Right ---
   // Use SVG data URIs for icons for crisp scaling
@@ -321,9 +371,7 @@ import { Container, Text, TextStyle } from "pixi.js";
     const bg = new Graphics();
     button.addChild(bg);
     button.addChild(icon);
-    button.eventMode = "static";
-    button.cursor = "pointer";
-    button.interactive = true;
+    addSoundToClickable(button);
     // Hover effect
     button.on("pointerover", () => {
       bg.tint = 0x009aff;
