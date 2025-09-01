@@ -259,7 +259,13 @@ authenticate().catch(console.error);
     const bgHeight = 48 * scale;
     playStartButtonBg = new Graphics();
     playStartButtonBg.beginFill(0x000000, 0.18);
-    playStartButtonBg.drawRoundedRect(4 * scale, 4 * scale, bgWidth, bgHeight, 18 * scale);
+    playStartButtonBg.drawRoundedRect(
+      4 * scale,
+      4 * scale,
+      bgWidth,
+      bgHeight,
+      18 * scale,
+    );
     playStartButtonBg.endFill();
     playStartButtonBg.beginFill(0xd32f2f, 1);
     playStartButtonBg.drawRoundedRect(0, 0, bgWidth, bgHeight, 18 * scale);
@@ -339,15 +345,7 @@ authenticate().catch(console.error);
 
   buildPlayStartButton();
 
-  // Entry point for animation and game round manager
-  async function startGameRound() {
-    // 1. Trigger animation sequence (placeholder)
-    await runAnimationSequence();
-    // 2. Call game round manager (not direct API)
-    const playResponse = await handleGameRoundManager();
-    // 3. Handle play response and continue animation (placeholder)
-    await handlePlayResponse(playResponse);
-  }
+  // ...existing code...
 
   // Placeholder for animation sequence
 
@@ -426,24 +424,7 @@ authenticate().catch(console.error);
     });
   }
 
-  // Placeholder for game round manager call
-  async function handleGameRoundManager() {
-    // TODO: Integrate with your game round manager logic
-    console.log("Game round manager called");
-    // Simulate response
-    return { result: "win", payoutMultiplier: 10, chosenCup: 1 };
-  }
-
-  // Placeholder for play response handling
-  async function handlePlayResponse(response: {
-    result: string;
-    payoutMultiplier?: number;
-    chosenCup?: number;
-  }) {
-    // TODO: Implement animation and logic for win/loss
-    console.log("Play response received", response);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-  }
+  // ...existing code...
   app.stage.addChild(playStartButton);
   // --- Balance and Sound Toggle ---
   let balance = 1000;
@@ -534,7 +515,7 @@ authenticate().catch(console.error);
   // --- Play logic and API hooks ---
   // onCupPick is handled by the abstraction
 
-  function onRest() { }
+  // ...existing code...
 
   function onBalanceUpdate(endRoundResponse: { balance: { amount: number } }) {
     if (
@@ -547,17 +528,7 @@ authenticate().catch(console.error);
     balanceText.text = `Balance: $${balance}`;
   }
 
-  async function handleAutomatedRound() {
-    await handleGameRound({
-      ForegroundAnimationGroup,
-      diamondSprite,
-      liftCup,
-      lowerCup,
-      onRest,
-      onBalanceUpdate,
-      balanceText,
-    });
-  }
+  // ...existing code...
 
   // --- Info Modal ---
   let infoModal: Container | null = null;
