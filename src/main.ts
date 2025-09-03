@@ -14,6 +14,11 @@ import { createBGAnimationGroup, LayoutContainer } from "./BGAnimationGroup";
 import { createCupGameSequence } from "./AnimationLogic";
 import { createForegroundAnimationGroup } from "./ForegroundAnimationGroup";
 import * as PIXI_SOUND from "pixi-sound";
+import {
+  createSveltePixiBridge,
+  type AutoPlayConfig,
+} from "./svelte-ui/sveltePixiBridge";
+import { AutoPlayManager } from "./svelte-ui/autoPlayManager";
 
 // --- Global sound effect helper for all clickable elements ---
 function addSoundToClickable(obj: Container | Sprite) {
@@ -197,6 +202,10 @@ authenticate().catch(console.error);
         betIndex--;
         betValue = betSteps[betIndex];
         updateBetText();
+        // Update Svelte UI with new bet amount
+        if (svelteBridge) {
+          svelteBridge.updateBetAmount(betValue);
+        }
       }
     });
 
@@ -255,6 +264,10 @@ authenticate().catch(console.error);
         betIndex++;
         betValue = betSteps[betIndex];
         updateBetText();
+        // Update Svelte UI with new bet amount
+        if (svelteBridge) {
+          svelteBridge.updateBetAmount(betValue);
+        }
       }
     });
 
@@ -776,4 +789,62 @@ authenticate().catch(console.error);
       );
     }
   });
+
+  // --- Svelte UI Integration ---
+  let autoPlayManager: AutoPlayManager;
+
+  // Initialize Svelte-PixiJS bridge
+  const pixiContainer = document.getElementById("pixi-container")!;
+  const svelteBridge = createSveltePixiBridge(app, pixiContainer, {
+    onAutoPlay: (config: AutoPlayConfig) => {
+      console.log("Starting auto-play:", config);
+
+      // Create auto-play manager if not exists
+      if (!autoPlayManager) {
+        autoPlayManager = new AutoPlayManager(svelteBridge, {
+          ForegroundAnimationGroup,
+          diamondSprite,
+          liftCup: liftCup,
+          lowerCup: lowerCup,
+          onRest: () => {
+            playStartButtonState = "ready";
+            setPlayStartButtonDisabled(false);
+          },
+          onBalanceUpdate: (endRoundResponse: {
+            balance: { amount: number };
+          }) => {
+            const newBalance = endRoundResponse.balance.amount / 1000000; // API_MULTIPLIER
+            balanceText.text = `Balance: $${newBalance.toFixed(2)}`;
+            svelteBridge.updateBalance(newBalance);
+          },
+          balanceText: balanceText,
+          betAmount: betValue,
+        });
+      }
+
+      autoPlayManager.start(config);
+    },
+
+    onStopAutoPlay: () => {
+      console.log("Stopping auto-play");
+      if (autoPlayManager) {
+        autoPlayManager.stop();
+      }
+    },
+
+    onSoundToggle: (enabled: boolean) => {
+      console.log("Sound toggle:", enabled);
+      sessionStorage.setItem("soundEnabled", enabled ? "1" : "0");
+      soundEnabled = enabled ? "1" : "0";
+    },
+  });
+
+  // Initialize bridge with current game state
+  const initialBalance =
+    parseFloat(balanceText.text.replace("Balance: $", "")) || 1000;
+  svelteBridge.updateBalance(initialBalance);
+  svelteBridge.updateBetAmount(betValue);
+  svelteBridge.updateGameState("rest");
+
+  console.log("Svelte UI integration initialized");
 })();
