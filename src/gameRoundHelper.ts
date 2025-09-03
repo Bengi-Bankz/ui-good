@@ -38,7 +38,7 @@ export interface GameRoundOptions {
   onRest: () => void;
   onBalanceUpdate: (endRoundResponse: EndRoundResponse) => void;
   balanceText: Text;
-  betAmount?: number; // Add bet amount parameter
+  playResponse?: PlayResponse | null; // Pre-existing play response from /wallet/play call
 }
 
 export async function handleGameRound(
@@ -54,36 +54,18 @@ export async function handleGameRound(
     onBalanceUpdate,
     skipAnimation = false,
     forceEndRound = false,
-    betAmount = 1,
+    playResponse = null,
   } = opts;
 
-  // Import API functions dynamically to avoid circular deps
-  const { getBookResponse, endRound, endRoundResponse } = await import(
-    "./rgs-auth"
-  );
+  // Import endRound function
+  const { endRound, endRoundResponse } = await import("./rgs-auth");
 
-  let playResponse: PlayResponse | null = null;
+  // Use the provided play response instead of making a new API call
   let activeBetError = false;
-  if (!skipAnimation) {
-    try {
-      playResponse = await getBookResponse(betAmount);
-    } catch (err) {
-      // If error is active bet, set flag
-      type RgsError = { error: string; message: string };
-      const e = err as RgsError;
-      if (
-        typeof err === "object" &&
-        err !== null &&
-        "error" in err &&
-        e.error === "ERR_VAL" &&
-        typeof e.message === "string" &&
-        /active bet/i.test(e.message)
-      ) {
-        activeBetError = true;
-      } else {
-        throw err;
-      }
-    }
+  if (!playResponse && !skipAnimation && !forceEndRound) {
+    // This should not happen in the new flow, but handle gracefully
+    console.warn("No play response provided to handleGameRound");
+    activeBetError = true;
   }
 
   // Step 2: Enable cup click and wait for user pick
@@ -152,7 +134,7 @@ export async function handleGameRound(
             await new Promise((r) => setTimeout(r, 800));
             await lowerCup(cup);
             diamondSprite.visible = false;
-            // End round and update balance
+            // End round and update balance for wins only
             await endRound();
             onBalanceUpdate(endRoundResponse || { balance: { amount: 0 } });
           } else {
@@ -175,6 +157,7 @@ export async function handleGameRound(
             await new Promise((r) => setTimeout(r, 800));
             await lowerCup(otherCup);
             diamondSprite.visible = false;
+            // Do NOT call endRound for losses - this is the key change
           }
         }
         // Reset state for next round

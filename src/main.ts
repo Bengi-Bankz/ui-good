@@ -341,13 +341,12 @@ authenticate().catch(console.error);
         balance -= betValue;
         balanceText.text = `Balance: $${balance}`;
 
-        // Try to get play response, catch active bet error
+        // Call /wallet/play once to start the round
+        let playResponse = null;
         let activeBetError = false;
-        // ...existing code...
         try {
-          // Try to get play response (simulate what handleGameRound does)
           const { getBookResponse } = await import("./rgs-auth");
-          await getBookResponse(betValue);
+          playResponse = await getBookResponse(betValue);
         } catch (err) {
           type RgsError = { error: string; message: string };
           const e = err as RgsError;
@@ -367,6 +366,7 @@ authenticate().catch(console.error);
             throw err;
           }
         }
+
         if (activeBetError) {
           // Skip animation, prompt choose a cup, call endRound after pick
           playStartButtonState = "waiting";
@@ -385,10 +385,10 @@ authenticate().catch(console.error);
             balanceText,
             skipAnimation: true,
             forceEndRound: true,
-            betAmount: betValue,
+            playResponse: null, // No valid play response for active bet error
           });
         } else {
-          // Normal flow: animation, then choose a cup
+          // Normal flow: animation, then choose a cup with the play response
           playStartButtonState = "waiting";
           buildPlayStartButton();
           await runAnimationSequence();
@@ -404,7 +404,7 @@ authenticate().catch(console.error);
             },
             onBalanceUpdate,
             balanceText,
-            betAmount: betValue,
+            playResponse: playResponse, // Pass the play response from /wallet/play
           });
         }
       });
